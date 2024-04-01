@@ -1,0 +1,11 @@
+[Unit]
+Description=Logs wifi probes on raspberry pi
+
+# this service also requires that airomon-ng be running in another process
+[Service]
+ExecStart=/home/drubles/wuds/start.sh
+WorkingDirectory=/home/drubles/wuds
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
