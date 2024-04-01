@@ -2,19 +2,17 @@ import argparse
 import csv
 import json
 import logging
-import os
+import random
 import sys
 from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler
-import random
-import config
 
-from scapy.all import sniff, Dot11ProbeReq, DHCP
-
+from scapy.all import sniff, Dot11ProbeReq
 from paho.mqtt import client as mqtt_client, enums as paho_enums
 
-from utils import probes, time
+import config
 from db import supabase_utils
+from utils import probes, time
 
 load_dotenv()
 
@@ -201,16 +199,12 @@ def main():
     build_oui_lookup()
 
     C = connect_mqtt()
-    while True:
-        if C.is_connected() == False:
-            general_logger("Detected client disconnect, reconnecting now")
-            C = connect_mqtt()
-            time.sleep(5)
-        try:
-            sniff(iface=args.monitor, prn=probe_log_build(C, logger), store=0)
-        except Exception as e:
-            general_logger.warning(type(e))
-            general_logger.error(e)
+
+    try:
+        sniff(iface=args.monitor, prn=probe_log_build(C, logger), store=0)
+    except Exception as e:
+        general_logger.warning(type(e))
+        general_logger.error(e)
 
 
 if __name__ == "__main__":
