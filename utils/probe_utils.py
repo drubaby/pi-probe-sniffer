@@ -12,7 +12,31 @@ def rssi(radiodata) -> str:
         return "-255dBm"
 
 
-def channel(radiodata) -> str:
+def get_dBm(radiodata: str) -> int:
+    """
+    Finds signal strength in dBm
+    """
+    start_index = radiodata.find("dBm_AntSignal=")
+    if start_index != -1:
+        # Extract the substring after "dBm_AntSignal="
+        substring = radiodata[start_index + len("dBm_AntSignal=") :]
+
+        # Find the end of the integer value
+        end_index = substring.find(" ")
+
+        # Extract the integer value
+        if end_index != -1:
+            dbm_antsignal = int(substring[:end_index])
+            return dbm_antsignal
+        else:
+            # If no space is found, the integer value continues till the end of the string
+            dbm_antsignal = int(substring)
+            return dbm_antsignal
+    else:
+        return -255
+
+
+def channel_frequency(radiodata) -> str:
     """
     Find Wifi channel number and signal frequency
     e.g.: C:04 2427Mhz
@@ -22,6 +46,7 @@ def channel(radiodata) -> str:
         start = data.find("ChannelFrequency=")
         channelNumber = data[start + 17 : start + 21]
         freq = int(channelNumber)
+
         if freq == 2412:
             return "C:01 " + str(freq) + "Mhz"
         if freq == 2417:
@@ -53,6 +78,25 @@ def channel(radiodata) -> str:
         else:
             return "-->>" + str(freq)
     return "Channel unknown"
+
+
+def get_channel_number(radiodata) -> int:
+    freq_str = channel_frequency(radiodata)
+    # split str into first 2 chars and coerce to integer
+    colon_index = freq_str.find(":")
+    if colon_index != -1:
+        # Extract the channel substring after ":"
+        substring = freq_str[colon_index + 1 : 4]
+
+        # Extract the numeric part from the substring
+        numeric_part = "".join(filter(str.isdigit, substring))
+
+        # Convert the numeric part to an integer
+        result = int(numeric_part)
+
+        return result
+    else:
+        return 0
 
 
 def binaryrep(firstOctet, scale=16, num_of_bits=8):

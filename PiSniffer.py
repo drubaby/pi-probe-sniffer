@@ -12,7 +12,8 @@ from paho.mqtt import client as mqtt_client, enums as paho_enums
 
 import config
 from db import supabase_utils
-from utils import probes, time
+from utils import probe_utils, time_utils
+from Probe import *
 
 load_dotenv()
 
@@ -118,23 +119,24 @@ def connect_mqtt():
 
 
 # Rotating logger and data formatting based on packet type
-def probe_log_build(C: mqtt_client, logger: logging):
+def probe_log_build(logger: logging):
+
+    # Instantiate MQTT Client
+    C = connect_mqtt()
 
     def probe_handler(packet):
         radio = str(packet.mysummary)
-        log_time = time.get_log_time()
+        log_time = time_utils.get_log_time()
 
         MAC = str(packet.addr2).upper()
         clientOUI = MAC[:8]
         firstOctet = clientOUI[:2]
-        binaryRep = probes.binaryrep(firstOctet)
+        binaryRep = probe_utils.binaryrep(firstOctet)
 
         # We're only concerned with wifi probes, i.e. packets with Dot11ProbeReq layer
         if packet.haslayer(Dot11ProbeReq):
-            # print(packet.info)
-            # print(packet.info.decode("utf-8", "ignore"))
-            # print(packet.info.decode("utf-16", "ignore"))
-            # Handle known devices: if *full MAC address* is included it was added from knownlist.json
+
+            # Handle trusted devices: if *full MAC address* is found in OUIMEM it came from the trusted device table
             if OUIMEM.get(MAC.lower()):
                 # Noisy to actually log this but uncomment to debug
                 # general_logger.info(f"{OUIMEM.get(MAC.lower())} seen")
@@ -142,17 +144,27 @@ def probe_log_build(C: mqtt_client, logger: logging):
             else:
                 probe = [
                     log_time,
-                    probes.rssi(radio),
-                    probes.channel(radio),
+                    probe_utils.rssi(radio),
+                    str(probe_utils.get_channel_number(radio)),
                     MAC.lower(),
                 ]
+                probe_class = Probe(
+                    log_time,
+                    probe_utils.get_dBm(radio),
+                    probe_utils.get_channel_number(radio),
+                    MAC.lower(),
+                )
+
                 if OUIMEM.get(clientOUI) is not None:
                     probe.append(OUIMEM.get(clientOUI))
+                    probe_class.oui = OUIMEM.get(clientOUI)
                 else:
                     if binaryRep[6:7] == "1":
                         probe.append("Locally Assigned")
+                        probe_class.oui = "Locally Assigned"
                     else:
                         probe.append("Unknown OUI")
+                        probe_class.oui = "Unknown OUI"
                 try:
                     if "\x00" not in packet[Dot11ProbeReq].info.decode(
                         "utf-8", "ignore"
@@ -161,15 +173,22 @@ def probe_log_build(C: mqtt_client, logger: logging):
                             decoded = str(packet.info.decode("utf-8", "ignore"))
                             BSSID = decoded if decoded != "" else "Undirected Probe"
                             probe.append(BSSID)
+                            probe_class.ssid = BSSID
                 except UnicodeDecodeError:
                     general_logger.error(
                         "Unicode decode error: ",
                         packet[Dot11ProbeReq].info.decode("utf-8", "ignore"),
                     )
+
                 # Logger writes probe to local CSV file (and STDOUT)
-                logger.info(CSVDelim.join(probe))
+                logger.info(probe_class.to_csv())
                 # MQQT Client publishes json-encoded data to broker
-                C.publish(topic, probe_json(probe))
+                C.publish(topic, probe_class.mqtt_json())
+                try:
+                    # Save sightings in DB table
+                    supabase_utils.log_sighting(sb_client, probe_class)
+                except Exception as e:
+                    print("Failed to save: ", e)
 
     return probe_handler
 
@@ -198,13 +217,12 @@ def main():
 
     build_oui_lookup()
 
-    C = connect_mqtt()
-
     try:
-        sniff(iface=args.monitor, prn=probe_log_build(C, logger), store=0)
+        sniff(iface=args.monitor, prn=probe_log_build(logger), store=0)
     except Exception as e:
         general_logger.warning(type(e))
-        general_logger.error(e)
+        general_logger.exception(e)
+        sys.exit(-1)
 
 
 if __name__ == "__main__":

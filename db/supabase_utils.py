@@ -1,7 +1,11 @@
 import os
 import json
+import sys
 from supabase import Client, create_client
 from dotenv import load_dotenv
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+import Probe
 
 load_dotenv()
 
@@ -16,7 +20,7 @@ def create_supabase_client() -> Client:
 
 def get_trusted_devices(supabase: Client) -> str:
     """
-    Returns a list of
+    Returns a json list of devices that have been marked Trusted
     """
     data = (
         supabase.table("known_devices")
@@ -25,3 +29,23 @@ def get_trusted_devices(supabase: Client) -> str:
         .execute()
     )
     return json.dumps(data.data)
+
+
+def log_sighting(supabase: Client, probe: Probe):
+    """
+    Logs probes to the device_sightings table in supabase db
+
+    timestamp
+    mac
+    name
+    rssi
+    oui
+    ssid
+
+    """
+
+    # timestamp
+    # print("sending to db: ", probe.to_supabase())
+
+    data = supabase.table("device_sightings").insert(probe.to_supabase()).execute()
+    return data

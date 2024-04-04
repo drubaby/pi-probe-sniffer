@@ -33,4 +33,4 @@ sleep 2
 echo "\e[92m Starting PiSniffer...'\e[0m"
 touch "/usb/$DATE.csv"
 echo "\e[92m PiSniffer.py -m $DEVICE -f /usb/${DATE} \e[0m"
-python PiSniffer.py -m $DEVICE -f /usb/${DATE}
+python /home/drubles/wuds/PiSniffer.py -m $DEVICE -f /usb/${DATE}
