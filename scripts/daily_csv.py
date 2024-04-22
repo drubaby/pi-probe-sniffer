@@ -73,7 +73,7 @@ def write_cleaned_csv(cleaned_csv: pd.DataFrame, file_path: str) -> None:
     """Writes cleaned csv to /usb/cleaned_data for storage"""
 
     filename = os.path.basename(file_path)
-    print(f"Writing to {os.path.join(cleaned_data_path, filename)}")
+    # print(f"Writing to {os.path.join(cleaned_data_path, filename)}")
     cleaned_csv.to_csv(
         os.path.join(cleaned_data_path, filename), header=True, index=False
     )
@@ -85,9 +85,7 @@ def add_probes_to_raw_table(cleaned_data: pd.DataFrame, supabase: Client):
     list = []
 
     list = cleaned_data.to_dict(orient="records")
-    print("# rows to upload: ", len(json.dumps(list)))
     data = supabase.table("csv_probes_raw").insert(list).execute()
-    print("data: ", data)
 
 
 def main():
