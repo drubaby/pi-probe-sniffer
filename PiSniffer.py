@@ -90,20 +90,23 @@ status_topic = config.STATUS_TOPIC
 
 
 def connect_mqtt():
+    client_id = f"wudsPi-{random.randint(0, 1000)}"
+
+    # Set Connecting Client ID
+    client = mqtt_client.Client(
+        paho_enums.CallbackAPIVersion.VERSION2, client_id, protocol=mqtt_client.MQTTv5
+    )
+
     def on_connect(client, userdata, flags, reason_code, properties):
         if reason_code == 0:
-            general_logger.info("Connected to MQTT Broker")
+            general_logger.info(f"Connected to MQTT Broker with client id: {client_id}")
+            client.publish(status_topic, "Online", qos=1, retain=True)
+            general_logger.info("Client connected flag: " + str(client.is_connected()))
         else:
             general_logger.warn("Failed to connect, return code %d\n", reason_code)
 
     def on_disconnect(client, userdata, reason_code, properties):
         general_logger.warn("Disconnected result code: " + str(reason_code))
-
-    client_id = f"wudsPi-{random.randint(0, 1000)}"
-    # Set Connecting Client ID
-    client = mqtt_client.Client(
-        paho_enums.CallbackAPIVersion.VERSION2, client_id, protocol=mqtt_client.MQTTv5
-    )
 
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
@@ -113,8 +116,7 @@ def connect_mqtt():
     client.connect(broker, port, 60, clean_start=False)
 
     client.loop_start()
-    client.publish(status_topic, "Online", qos=1, retain=True)
-    general_logger.info("Client connected flag: " + str(client.is_connected()))
+    # client.publish(status_topic, "Online", qos=1, retain=True)
     return client
 
 
