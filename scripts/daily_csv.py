@@ -1,6 +1,7 @@
 import os
 import glob
 import warnings
+import datetime
 
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 import pandas as pd
@@ -17,19 +18,32 @@ To run: python ~/wuds/scripts/daily_csv.py
 
 # path to raw data and output folder cleaned for data separation
 usb_path = "/usb/"
-cleaned_data_path = usb_path + "cleaned_data"
+cleaned_data_path = usb_path + "cleaned_data/"
 
 
-def find_yesterdays_csv() -> str:
+def sorted_csvs_by_createdate(dir_path: str) -> list:
+    list_of_files = glob.glob(dir_path + "*.csv")
+    sorted_files = sorted(list_of_files, key=os.path.getctime)
+    return sorted_files
+
+
+def find_yesterdays_csv(sorted_csvs: list) -> str:
     """
     Finds yesterday's CSV (i.e. second-to-last csv modified in our usb)
     """
-    list_of_files = glob.glob(usb_path + "*.csv")
-    # print(list_of_files)
-    sorted_files = sorted(list_of_files, key=os.path.getctime)
-    # print("sorted: ", sorted)
-    yesterday = sorted_files[-2]
-    return yesterday
+    return sorted_csvs[-2]
+
+
+def remove_old_csvs(sorted_csvs: list, AGE_LIMIT=30) -> None:
+    """Keep raw CSV files around for 30 days"""
+    today = datetime.datetime.today()
+
+    for file in sorted_csvs:
+        create_date = datetime.datetime.fromtimestamp(os.path.getctime(file))
+        age = today - create_date
+        if age.days > AGE_LIMIT:
+            print("Clean up old csv: ", file)
+            os.remove(file)
 
 
 def read_csv_to_dataframe(csv_filepath) -> pd.DataFrame:
@@ -53,8 +67,6 @@ def clean_yesterdays_csv(csv_dataFrame: pd.DataFrame) -> pd.DataFrame:
     """
     Removes any duplicate MAC addresses and any invalid rows from CSV
     """
-    # print("Cleaning up yesterday's csv: ", csv_filepath)
-
     subset = ["mac", "rssi", "channel", "oui", "ssid", "logtime"]
 
     csv_dataFrame.drop_duplicates(subset="mac", keep="first", inplace=True)
@@ -91,11 +103,20 @@ def add_probes_to_raw_table(cleaned_data: pd.DataFrame, supabase: Client):
 def main():
     load_dotenv()
 
+    RAW_CSV_AGE_LIMIT = 30
+    CLEANED_CSV_AGE_LIMIT = 60
+
     # e.g. 03-25-2024.csv
-    yesterdays_csv_filepath: str = find_yesterdays_csv()
+    sorted_csvs = sorted_csvs_by_createdate(usb_path)
+    yesterdays_csv_filepath: str = find_yesterdays_csv(sorted_csvs)
+
     csv_dataframe: pd.DataFrame = read_csv_to_dataframe(yesterdays_csv_filepath)
     cleaned: pd.DataFrame = clean_yesterdays_csv(csv_dataframe)
     write_cleaned_csv(cleaned, yesterdays_csv_filepath)
+
+    # Remove csvs >30 days old in base path and >60 days in cleaned path
+    remove_old_csvs(sorted_csvs, RAW_CSV_AGE_LIMIT)
+    remove_old_csvs(sorted_csvs_by_createdate(cleaned_data_path), CLEANED_CSV_AGE_LIMIT)
 
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SECRET_KEY")
