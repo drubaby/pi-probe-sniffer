@@ -2,5 +2,6 @@ OUIMEM.txt
 knownlist.json
 .realsync
 .env
-
 *.code-workspace
+CLAUDE.md
+

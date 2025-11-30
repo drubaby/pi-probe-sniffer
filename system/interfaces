@@ -1,8 +1,0 @@
-# interfaces(5) file used by ifup(8) and ifdown(8)
-# Include files from /etc/network/interfaces.d:
-source /etc/network/interfaces.d/*
-auto wlan0
-# iface wlan0 inet manual
-pre-up iw dev wlan0 set type monitor
-pre-up ip link set wlan0 name wlan0mon
-pre-up ip link set wlan0mon up

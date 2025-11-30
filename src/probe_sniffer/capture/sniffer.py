@@ -4,16 +4,17 @@ import json
 import logging
 import random
 import sys
+from pathlib import Path
 from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler
 
 from scapy.all import sniff, Dot11ProbeReq
 from paho.mqtt import client as mqtt_client, enums as paho_enums
 
-import config
-from db import supabase_utils
-from utils import probe_utils, time_utils
-from Probe import *
+from probe_sniffer import config
+from probe_sniffer.storage import supabase_utils
+from probe_sniffer.utils import probe_utils, time_utils
+from probe_sniffer.models.probe import Probe
 
 load_dotenv()
 
@@ -54,8 +55,12 @@ def build_oui_lookup() -> None:
     except:
         general_logger.error("Failed to fetch trusted devices")
 
+    # Get path to data/OUI.txt relative to project root
+    project_root = Path(__file__).parent.parent.parent.parent
+    oui_file = project_root / "data" / "OUI.txt"
+
     with open(
-        "OUI.txt",
+        oui_file,
         "r",
     ) as OUILookup:
         for line in csv.reader(OUILookup, delimiter="\t"):

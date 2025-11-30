@@ -1,11 +1,9 @@
 import os
 import json
-import sys
 from supabase import Client, create_client
 from dotenv import load_dotenv
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-import Probe
+from probe_sniffer.models.probe import Probe
 
 load_dotenv()
 

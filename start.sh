@@ -24,7 +24,7 @@ echo "\e[91m Stopping active airmon devices... \e[0m"
 airmon-ng check kill
 sleep 2
 DEVICE=$(iw dev | awk '$1=="Interface"{print $2}')
-airmon-ng start $DEVICE
+# airmon-ng start $DEVICE
 
 echo "\e[92m Starting airodump-ng on device: $DEVICE in background\e[0m"
 airodump-ng -K 1 $DEVICE & >> /dev/null
