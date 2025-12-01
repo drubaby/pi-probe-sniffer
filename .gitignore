@@ -5,6 +5,9 @@ knownlist.json
 *.code-workspace
 CLAUDE.md
 ROADMAP.md
+UI.md
+
+node_modules/
 
 # Python
 __pycache__/
