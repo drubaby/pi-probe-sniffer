@@ -30,7 +30,8 @@ apt-get install -y \
     python3-pip \
     python3-venv \
     rsync \
-    curl
+    curl \
+    sqlite3
 
 # Configure NetworkManager to ignore USB WiFi interfaces (for monitor mode)
 echo "Configuring NetworkManager to ignore USB WiFi interfaces..."

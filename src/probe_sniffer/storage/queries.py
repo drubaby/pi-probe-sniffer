@@ -82,6 +82,10 @@ def log_sighting(sighting: SightingDTO):
     """
     now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
 
+    # Ensure device exists first (for foreign key constraint)
+    update_last_seen(sighting.mac)
+
+    # Then log the sighting
     with get_cursor() as cursor:
         cursor.execute(
             """
@@ -97,6 +101,3 @@ def log_sighting(sighting: SightingDTO):
                 sighting.oui,
             ),
         )
-
-    # Update device last_seen timestamp
-    update_last_seen(sighting.mac)

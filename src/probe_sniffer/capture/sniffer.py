@@ -12,7 +12,8 @@ from scapy.all import sniff, Dot11ProbeReq
 from paho.mqtt import client as mqtt_client, enums as paho_enums
 
 from probe_sniffer import config
-from probe_sniffer.storage import supabase_utils
+from probe_sniffer.storage.database import init_database
+from probe_sniffer.storage.queries import get_trusted_devices, log_sighting
 from probe_sniffer.utils import probe_utils, time_utils
 from probe_sniffer.models.probe import Probe
 
@@ -49,16 +50,16 @@ OUIMEM = {}
 def build_oui_lookup() -> None:
     """
     Builds OUIMEM dictionary for quick manufacturer lookup.
-    First adds trusted device *full mac addresses* from supabase table to the dictionary before adding all manufacturers from saved OUI.txt file
+    First adds trusted device *full mac addresses* from SQLite to the dictionary before adding all manufacturers from saved OUI.txt file
     Eventually it would be good to curl OUI.txt from wireshark each day...
     """
     try:
-        # trusted = supabase_utils.get_trusted_devices(sb_client)
-        trusted = []  # TODO: Fetch trusted list from new db
-        for item in json.loads(trusted):
-            OUIMEM[item["mac"].lower()] = item["name"]
-    except:
-        general_logger.error("Failed to fetch trusted devices")
+        # Fetch trusted devices from SQLite
+        trusted_macs = get_trusted_devices()
+        for mac in trusted_macs:
+            OUIMEM[mac.lower()] = "Trusted Device"
+    except Exception as e:
+        general_logger.error(f"Failed to fetch trusted devices: {e}")
 
     # Get path to data/OUI.txt relative to project root
     project_root = Path(__file__).parent.parent.parent.parent
@@ -194,12 +195,11 @@ def probe_log_build(logger: logging):
                 logger.info(probe_class.to_csv())
                 # MQQT Client publishes json-encoded data to broker
                 C.publish(topic, probe_class.mqtt_json())
+                # Save sighting to SQLite database
                 try:
-                    # Save sightings in DB table
-                    # supabase_utils.log_sighting(sb_client, probe_class)
-                    return  # TODO: save functionality
+                    log_sighting(probe_class.to_sighting_dto())
                 except Exception as e:
-                    print("Failed to save: ", e)
+                    general_logger.error(f"Failed to save sighting: {e}")
 
     return probe_handler
 
@@ -215,6 +215,10 @@ def main():
         sys.exit(-1)
 
     general_logger.info("**** Sniff script started ****")
+
+    # Initialize SQLite database
+    init_database()
+
     logger = logging.getLogger("PROBES")
     # Output location
     # handler = RotatingFileHandler(str(args.file) + ".csv")
