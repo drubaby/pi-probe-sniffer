@@ -61,9 +61,8 @@ def build_oui_lookup() -> None:
     except Exception as e:
         general_logger.error(f"Failed to fetch trusted devices: {e}")
 
-    # Get path to data/OUI.txt relative to project root
-    project_root = Path(__file__).parent.parent.parent.parent
-    oui_file = project_root / "data" / "OUI.txt"
+    # Get path to data/OUI.txt from package root
+    oui_file = Path(__file__).parent.parent / "data" / "OUI.txt"
 
     with open(
         oui_file,
