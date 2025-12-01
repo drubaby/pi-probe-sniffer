@@ -13,8 +13,6 @@ dependencies = [
     "scapy>=2.5.0",
     "python-dotenv>=1.0.0",
     "paho-mqtt>=2.0.0",
-    "requests>=2.31.0",
-    "supabase>=2.0.0",
     "pytz>=2024.1",
 ]
 
@@ -29,7 +27,7 @@ dev = [
 probe-sniffer = "probe_sniffer.capture.sniffer:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.black]
 line-length = 100

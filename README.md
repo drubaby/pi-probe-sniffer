@@ -75,7 +75,7 @@ This project uses [UV](https://github.com/astral-sh/uv) for fast Python package 
 ### Project Structure
 
 ```
-src/probe_sniffer/          # Main package
+probe_sniffer/              # Main package
 ├── capture/                # Packet capture & monitoring
 ├── models/                 # Data models (Probe, Device)
 ├── storage/                # Database layer
