@@ -11,8 +11,8 @@ export interface Device {
 	first_seen: string;
 	last_seen: string;
 	is_trusted: boolean;
-	oui?: string | null;  // Optional until backend deploys
-	ssids?: string[];     // Optional until backend deploys
+	oui?: string | null;
+	ssids?: string[];
 }
 
 export interface DeviceWithStats extends Device {

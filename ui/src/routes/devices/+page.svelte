@@ -9,6 +9,17 @@
 	// Filters
 	let filterMode: 'all' | 'trusted' | 'untrusted' = 'untrusted';
 	let searchQuery = '';
+	let ouiFilter = '';
+	let ssidFilter = '';
+
+	// Pagination
+	let currentPage = 1;
+	const itemsPerPage = 50;
+
+	// Sorting
+	type SortColumn = 'mac' | 'oui' | 'name' | 'last_seen' | 'is_trusted';
+	let sortColumn: SortColumn = 'last_seen';
+	let sortDirection: 'asc' | 'desc' = 'desc';
 
 	// Editing
 	let editingDevice: string | null = null;
@@ -59,12 +70,34 @@
 		editName = '';
 	}
 
+	function toggleSort(column: SortColumn) {
+		if (sortColumn === column) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortColumn = column;
+			sortDirection = 'asc';
+		}
+	}
+
+	// Get unique OUIs and SSIDs for filter dropdowns
+	$: uniqueOuis = Array.from(new Set(devices.map((d) => d.oui).filter((oui) => oui)))
+		.sort();
+	$: uniqueSsids = Array.from(
+		new Set(devices.flatMap((d) => d.ssids || []).filter((ssid) => ssid))
+	).sort();
+
 	// Computed filtered devices
 	$: filteredDevices = devices
 		.filter((d) => {
 			// Filter by trust status
 			if (filterMode === 'trusted' && !d.is_trusted) return false;
 			if (filterMode === 'untrusted' && d.is_trusted) return false;
+
+			// Filter by OUI
+			if (ouiFilter && d.oui !== ouiFilter) return false;
+
+			// Filter by SSID
+			if (ssidFilter && (!d.ssids || !d.ssids.includes(ssidFilter))) return false;
 
 			// Filter by search query
 			if (searchQuery) {
@@ -78,12 +111,48 @@
 			return true;
 		})
 		.sort((a, b) => {
-			// Sort: untrusted first, then by last_seen
-			if (a.is_trusted !== b.is_trusted) {
-				return a.is_trusted ? 1 : -1;
+			let comparison = 0;
+
+			switch (sortColumn) {
+				case 'mac':
+					comparison = a.mac.localeCompare(b.mac);
+					break;
+				case 'oui':
+					const ouiA = a.oui || '';
+					const ouiB = b.oui || '';
+					comparison = ouiA.localeCompare(ouiB);
+					break;
+				case 'name':
+					const nameA = a.name || '';
+					const nameB = b.name || '';
+					comparison = nameA.localeCompare(nameB);
+					break;
+				case 'last_seen':
+					comparison = a.last_seen.localeCompare(b.last_seen);
+					break;
+				case 'is_trusted':
+					comparison = Number(a.is_trusted) - Number(b.is_trusted);
+					break;
 			}
-			return b.last_seen.localeCompare(a.last_seen);
+
+			return sortDirection === 'asc' ? comparison : -comparison;
 		});
+
+	// Pagination calculations
+	$: totalPages = Math.ceil(filteredDevices.length / itemsPerPage);
+	$: paginatedDevices = filteredDevices.slice(
+		(currentPage - 1) * itemsPerPage,
+		currentPage * itemsPerPage
+	);
+
+	// Reset to page 1 when filters change
+	$: if (filterMode || searchQuery || ouiFilter || ssidFilter) {
+		currentPage = 1;
+	}
+
+	function goToPage(page: number) {
+		currentPage = Math.max(1, Math.min(page, totalPages));
+	}
 </script>
 
 <div class="container">
@@ -123,6 +192,41 @@
 		</div>
 	</div>
 
+	<!-- Column Filters -->
+	<div class="column-filters">
+		<div class="filter-group">
+			<label for="oui-filter">Manufacturer:</label>
+			<select id="oui-filter" bind:value={ouiFilter}>
+				<option value="">All Manufacturers</option>
+				{#each uniqueOuis as oui}
+					<option value={oui}>{oui}</option>
+				{/each}
+			</select>
+		</div>
+
+		<div class="filter-group">
+			<label for="ssid-filter">SSID:</label>
+			<select id="ssid-filter" bind:value={ssidFilter}>
+				<option value="">All SSIDs</option>
+				{#each uniqueSsids as ssid}
+					<option value={ssid}>{ssid}</option>
+				{/each}
+			</select>
+		</div>
+
+		{#if ouiFilter || ssidFilter}
+			<button
+				class="clear-filters-btn"
+				on:click={() => {
+					ouiFilter = '';
+					ssidFilter = '';
+				}}
+			>
+				Clear Filters
+			</button>
+		{/if}
+	</div>
+
 	{#if loading}
 		<div class="loading">Loading devices...</div>
 	{:else if error}
@@ -139,23 +243,63 @@
 		</div>
 	{:else}
 		<div class="results">
-			<p class="count">Showing {filteredDevices.length} devices</p>
+			<p class="count">
+				Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(
+					currentPage * itemsPerPage,
+					filteredDevices.length
+				)} of {filteredDevices.length} devices
+			</p>
 		</div>
 
 		<table class="device-table">
 			<thead>
 				<tr>
-					<th>MAC Address</th>
-					<th>Manufacturer</th>
-					<th>Name</th>
+					<th>
+						<button class="sort-header" on:click={() => toggleSort('mac')}>
+							MAC Address
+							{#if sortColumn === 'mac'}
+								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+							{/if}
+						</button>
+					</th>
+					<th>
+						<button class="sort-header" on:click={() => toggleSort('oui')}>
+							Manufacturer
+							{#if sortColumn === 'oui'}
+								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+							{/if}
+						</button>
+					</th>
+					<th>
+						<button class="sort-header" on:click={() => toggleSort('name')}>
+							Name
+							{#if sortColumn === 'name'}
+								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+							{/if}
+						</button>
+					</th>
 					<th>Probed SSIDs</th>
-					<th>Last Seen</th>
-					<th>Trusted</th>
+					<th>
+						<button class="sort-header" on:click={() => toggleSort('last_seen')}>
+							Last Seen
+							{#if sortColumn === 'last_seen'}
+								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+							{/if}
+						</button>
+					</th>
+					<th>
+						<button class="sort-header" on:click={() => toggleSort('is_trusted')}>
+							Trusted
+							{#if sortColumn === 'is_trusted'}
+								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+							{/if}
+						</button>
+					</th>
 					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each filteredDevices as device (device.mac)}
+				{#each paginatedDevices as device (device.mac)}
 					<tr class:trusted={device.is_trusted}>
 						<td class="mac">{device.mac}</td>
 						<td class="oui">{device.oui || 'Unknown'}</td>
@@ -212,6 +356,59 @@
 				{/each}
 			</tbody>
 		</table>
+
+		<!-- Pagination Controls -->
+		{#if totalPages > 1}
+			<div class="pagination">
+				<button
+					class="page-btn"
+					on:click={() => goToPage(currentPage - 1)}
+					disabled={currentPage === 1}
+				>
+					← Previous
+				</button>
+
+				<div class="page-numbers">
+					{#if currentPage > 2}
+						<button class="page-btn" on:click={() => goToPage(1)}>1</button>
+						{#if currentPage > 3}
+							<span class="page-ellipsis">...</span>
+						{/if}
+					{/if}
+
+					{#if currentPage > 1}
+						<button class="page-btn" on:click={() => goToPage(currentPage - 1)}>
+							{currentPage - 1}
+						</button>
+					{/if}
+
+					<button class="page-btn active">{currentPage}</button>
+
+					{#if currentPage < totalPages}
+						<button class="page-btn" on:click={() => goToPage(currentPage + 1)}>
+							{currentPage + 1}
+						</button>
+					{/if}
+
+					{#if currentPage < totalPages - 1}
+						{#if currentPage < totalPages - 2}
+							<span class="page-ellipsis">...</span>
+						{/if}
+						<button class="page-btn" on:click={() => goToPage(totalPages)}>
+							{totalPages}
+						</button>
+					{/if}
+				</div>
+
+				<button
+					class="page-btn"
+					on:click={() => goToPage(currentPage + 1)}
+					disabled={currentPage === totalPages}
+				>
+					Next →
+				</button>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -287,6 +484,56 @@
 		border-color: #007bff;
 	}
 
+	.column-filters {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	.filter-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.filter-group label {
+		font-size: 0.9rem;
+		color: #495057;
+		font-weight: 500;
+	}
+
+	.filter-group select {
+		padding: 0.5rem 1rem;
+		border: 2px solid #ddd;
+		border-radius: 6px;
+		font-size: 0.9rem;
+		background: white;
+		cursor: pointer;
+		min-width: 200px;
+	}
+
+	.filter-group select:focus {
+		outline: none;
+		border-color: #007bff;
+	}
+
+	.clear-filters-btn {
+		padding: 0.5rem 1rem;
+		background: #dc3545;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: background 0.2s;
+	}
+
+	.clear-filters-btn:hover {
+		background: #c82333;
+	}
+
 	.loading,
 	.empty {
 		text-align: center;
@@ -331,12 +578,38 @@
 
 	th {
 		text-align: left;
-		padding: 1rem;
+		padding: 0.5rem 1rem;
 		font-weight: 600;
 		color: #495057;
 		font-size: 0.85rem;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+	}
+
+	.sort-header {
+		background: none;
+		border: none;
+		padding: 0.5rem 0;
+		cursor: pointer;
+		color: #495057;
+		font-size: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		transition: color 0.2s;
+	}
+
+	.sort-header:hover {
+		color: #007bff;
+	}
+
+	.sort-icon {
+		font-size: 1rem;
+		color: #007bff;
 	}
 
 	td {
@@ -480,5 +753,54 @@
 
 	.btn-cancel:hover {
 		background: #5a6268;
+	}
+
+	/* Pagination */
+	.pagination {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 2rem;
+		padding: 1rem;
+	}
+
+	.page-numbers {
+		display: flex;
+		gap: 0.25rem;
+		align-items: center;
+	}
+
+	.page-btn {
+		min-width: 40px;
+		padding: 0.5rem 1rem;
+		border: 1px solid #dee2e6;
+		background: white;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: all 0.2s;
+	}
+
+	.page-btn:hover:not(:disabled):not(.active) {
+		background: #f8f9fa;
+		border-color: #007bff;
+	}
+
+	.page-btn.active {
+		background: #007bff;
+		color: white;
+		border-color: #007bff;
+		font-weight: 600;
+	}
+
+	.page-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.page-ellipsis {
+		padding: 0 0.5rem;
+		color: #6c757d;
 	}
 </style>
