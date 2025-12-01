@@ -12,9 +12,10 @@ license = {text = "GPL-3.0"}
 dependencies = [
     "scapy>=2.5.0",
     "python-dotenv>=1.0.0",
-    "paho-mqtt<2.0.0",
+    "paho-mqtt>=2.0.0",
     "requests>=2.31.0",
     "supabase>=2.0.0",
+    "pytz>=2024.1",
 ]
 
 [project.optional-dependencies]

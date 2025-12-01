@@ -11,41 +11,76 @@ Future work:
 ## Hardware
 
 ### Required
-- Raspberry Pi
+- Linux host (Raspberry Pi, thin client, etc.)
 - USB Wireless Card capable of monitor mode
-- USB Drive (to capture logs)
 
 ### Hardware setup
 
-The wireless card will be detected and put into monitor mode by `start.sh` but we will want the usb drive to auto-mount on startup.
-1. run `sudo blkid` to find the `PARTUUID` of the usb drive
-2. add the following line to `/etc/fstab` where PARTUUID matches your device id
+If your host has multiple WiFi interfaces (built-in + USB), you need to identify which one to use for monitor mode. The USB WiFi interface will be configured in `.env` - see instructions in `.env.example` for how to find your interface name.
 
+## Deployment
+
+### Initial Setup
+
+1. Configure `.env` locally:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your remote host details and USB WiFi interface name
+   ```
+
+2. Run bootstrap (one-time setup):
+   ```bash
+   make bootstrap
+   ```
+
+### Deploying Changes
+
+After making code changes:
 ```bash
-PARTUUID=24f4a1c2-233b-cf49-a147-137e81505db0 /media/usb ntfs defaults,auto,nofail,x-systemd,device-timeout=30, -o umask=000 0 0
+make deploy
 ```
 
-## Installation
+### Service Management
 
-1. Clone this repository to raspberry pi
-2. Make scripts executable with `sudo chmod +x start.sh` and `sudo chmod +x setup.sh`
-3. Run `sudo bash ./setup.sh` for initial setup (Do this only once! See Optional Setup for steps to do this manually)
+```bash
+make status    # Check service status
+make logs      # View live logs
+make restart   # Restart service
+```
 
----
-### Optional Setup
-Run these steps to manually set up the `setup.sh` steps
-1. Install linux dependencies:
-    ```bash
-    sudo apt-get install -y aircrack-ng git python3-pip
-    ```
-2. Copy systemd service to local systemd directory, reload daemon and start service
+## Development
+
+### Setting up local environment
+
+This project uses [UV](https://github.com/astral-sh/uv) for fast Python package management.
+
+1. **Install UV** (if not already installed):
    ```bash
-      #copy local service to systemd dir
-      sudo cp probe-sniffer.service /etc/systemd/system/
-      sudo systemctl daemon-reload
-      sudo systemctl enable probe-sniffer.service
-      sudo systemctl start probe-sniffer.service
-    ```
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Create virtual environment and install dependencies**:
+   ```bash
+   uv venv
+   source .venv/bin/activate
+   uv pip install -e .
+   ```
+
+3. **Configure environment**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+### Project Structure
+
+```
+src/probe_sniffer/          # Main package
+├── capture/                # Packet capture & monitoring
+├── models/                 # Data models (Probe, Device)
+├── storage/                # Database layer
+└── utils/                  # Utility functions
+```
 ---
 
 ## Acknowledgements

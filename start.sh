@@ -1,36 +1,61 @@
-#!/usr/bin/sh
-DATE=$(date +%m-%d-%Y)
+#!/usr/bin/bash
 
-echo "\e[91m Killing any running PiSniffer instances... \e[0m"
-pkill -f PiSniffer
+# Load environment variables
+set -a
+source .env
+set +a
+
+# Use configured USB WiFi interface from .env
+WIFI_INTERFACE="${MONITOR_WIFI_INTERFACE:-wlan0}"
+
+echo "\e[91m Killing any running probe-sniffer instances... \e[0m"
+pkill -f probe_sniffer
 pkill -f airodump-ng
 
-DEVICE=$(iw dev | awk '$1=="Interface"{print $2}')
-if expr $DEVICE == 'wlan0mon'
-then echo "\e[92m Wireless card already in monitor mode :) \n \e[0m"
-else
-echo "\e[91m No active monitor devices, setting up wlan0... \e[0m"
-airmon-ng start wlan0
-ifconfig wlan0 down
-iwconfig wlan0 mode monitor
-ifconfig wlan0 up
-iwconfig wlan0
-sleep 2
-echo "iwconfig after all that: "
-iwconfig
+# Check if monitor interface already exists (from previous run)
+MONITOR_INTERFACE=""
+for iface in $(ip link show | grep -E "^[0-9]+:" | awk '{print $2}' | tr -d ':'); do
+    if [[ "$iface" == *"mon" ]]; then
+        MONITOR_INTERFACE="$iface"
+        echo "\e[92m Found existing monitor interface: $MONITOR_INTERFACE \e[0m"
+        break
+    fi
+done
+
+# If no monitor interface exists, create one with airmon-ng
+if [ -z "$MONITOR_INTERFACE" ]; then
+    # Check if the base interface exists
+    if ! ip link show "$WIFI_INTERFACE" &> /dev/null; then
+        echo "\e[91m ERROR: Interface $WIFI_INTERFACE not found! \e[0m"
+        echo "Available interfaces:"
+        ip link show | grep -E "^[0-9]+:" | awk '{print $2}' | tr -d ':'
+        exit 1
+    fi
+
+    # Configure monitor mode using airmon-ng
+    echo "\e[91m Configuring $WIFI_INTERFACE for monitor mode... \e[0m"
+    sudo airmon-ng start "$WIFI_INTERFACE"
+
+    # Find the monitor interface that was created
+    for iface in $(ip link show | grep -E "^[0-9]+:" | awk '{print $2}' | tr -d ':'); do
+        if [[ "$iface" == *"mon" ]]; then
+            MONITOR_INTERFACE="$iface"
+            echo "\e[92m Monitor interface created: $MONITOR_INTERFACE \e[0m"
+            break
+        fi
+    done
+
+    if [ -z "$MONITOR_INTERFACE" ]; then
+        echo "\e[91m ERROR: Failed to create monitor interface! \e[0m"
+        exit 1
+    fi
 fi
 
-echo "\e[91m Stopping active airmon devices... \e[0m"
-airmon-ng check kill
-sleep 2
-DEVICE=$(iw dev | awk '$1=="Interface"{print $2}')
-# airmon-ng start $DEVICE
-
-echo "\e[92m Starting airodump-ng on device: $DEVICE in background\e[0m"
-airodump-ng -K 1 $DEVICE & >> /dev/null
 sleep 2
 
-echo "\e[92m Starting PiSniffer...'\e[0m"
-touch "/usb/$DATE.csv"
-echo "\e[92m PiSniffer.py -m $DEVICE -f /usb/${DATE} \e[0m"
-python /home/drubles/wuds/PiSniffer.py -m $DEVICE -f /usb/${DATE}
+echo "\e[92m Starting airodump-ng on device: $MONITOR_INTERFACE in background\e[0m"
+airodump-ng -K 1 "$MONITOR_INTERFACE" &> /dev/null &
+sleep 2
+
+echo "\e[92m Starting probe-sniffer on $MONITOR_INTERFACE...\e[0m"
+python -m probe_sniffer -m "$MONITOR_INTERFACE"

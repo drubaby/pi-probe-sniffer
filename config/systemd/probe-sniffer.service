@@ -1,11 +1,24 @@
 [Unit]
-Description=Logs wifi probes on raspberry pi
+Description=WiFi Probe Request Sniffer
+After=network.target
 
-# this service also requires that airomon-ng be running in another process
 [Service]
-ExecStart=/home/drubles/wuds/start.sh
-WorkingDirectory=/home/drubles/wuds
+Type=simple
+User=root
+WorkingDirectory=/opt/probe-sniffer
+EnvironmentFile=/opt/probe-sniffer/.env
+Environment="PATH=/opt/probe-sniffer/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Run setup script to configure monitor mode, then start sniffer
+ExecStart=/opt/probe-sniffer/start.sh
+
+# Restart on failure
 Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

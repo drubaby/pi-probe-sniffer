@@ -24,19 +24,23 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
 )
-# sniff_logs logs start times and errors to usb
-sniff_logs = "/usb/sniff_log.log"
+# sniff_logs logs start times and errors
+import os
+
+sniff_logs = os.getenv("LOG_PATH", "/var/log/probe-sniffer/sniffer.log")
 general_logger = logging.getLogger("GENERAL")
 formatter = logging.Formatter(
     "%(asctime)s %(levelname)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
 )
+# Create log directory if it doesn't exist
+Path(sniff_logs).parent.mkdir(parents=True, exist_ok=True)
 handler = logging.FileHandler(sniff_logs, mode="a")
 handler.setFormatter(formatter)
 general_logger.addHandler(handler)
 
 CSVDelim = ","
 
-sb_client = supabase_utils.create_supabase_client()
+# sb_client = supabase_utils.create_supabase_client()
 
 # Python Dict built to hold all known devices and known mac->manufacturer designations
 OUIMEM = {}
@@ -49,7 +53,8 @@ def build_oui_lookup() -> None:
     Eventually it would be good to curl OUI.txt from wireshark each day...
     """
     try:
-        trusted = supabase_utils.get_trusted_devices(sb_client)
+        # trusted = supabase_utils.get_trusted_devices(sb_client)
+        trusted = []  # TODO: Fetch trusted list from new db
         for item in json.loads(trusted):
             OUIMEM[item["mac"].lower()] = item["name"]
     except:
@@ -173,9 +178,7 @@ def probe_log_build(logger: logging):
                         probe.append("Unknown OUI")
                         probe_class.oui = "Unknown OUI"
                 try:
-                    if "\x00" not in packet[Dot11ProbeReq].info.decode(
-                        "utf-8", "ignore"
-                    ):
+                    if "\x00" not in packet[Dot11ProbeReq].info.decode("utf-8", "ignore"):
                         if str(packet.info):
                             decoded = str(packet.info.decode("utf-8", "ignore"))
                             BSSID = decoded if decoded != "" else "Undirected Probe"
@@ -193,7 +196,8 @@ def probe_log_build(logger: logging):
                 C.publish(topic, probe_class.mqtt_json())
                 try:
                     # Save sightings in DB table
-                    supabase_utils.log_sighting(sb_client, probe_class)
+                    # supabase_utils.log_sighting(sb_client, probe_class)
+                    return  # TODO: save functionality
                 except Exception as e:
                     print("Failed to save: ", e)
 
@@ -204,23 +208,18 @@ def main():
     # Arguments for terminal control
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--monitor")
-    parser.add_argument("-f", "--file")
     args = parser.parse_args()
 
     if not args.monitor:
         print("Monitor mode adapter not set with -m flag")
         sys.exit(-1)
 
-    if not args.file:
-        print("Output location not set with -f flag")
-        sys.exit(-1)
-
     general_logger.info("**** Sniff script started ****")
     logger = logging.getLogger("PROBES")
     # Output location
-    handler = RotatingFileHandler(str(args.file) + ".csv")
-    logger.addHandler(handler)
-    logger.addHandler(logging.StreamHandler(sys.stdout))
+    # handler = RotatingFileHandler(str(args.file) + ".csv")
+    # logger.addHandler(handler)
+    # logger.addHandler(logging.StreamHandler(sys.stdout))
 
     build_oui_lookup()
 
