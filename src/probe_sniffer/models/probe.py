@@ -1,4 +1,5 @@
 import json
+from probe_sniffer.storage.dto import SightingDTO
 
 
 class Probe:
@@ -63,3 +64,17 @@ class Probe:
             "oui": self.oui,
             "ssid": self.ssid,
         }
+
+    def to_sighting_dto(self) -> SightingDTO:
+        """
+        Convert Probe to SightingDTO for storage layer.
+
+        Returns:
+            SightingDTO object for database persistence
+        """
+        return SightingDTO(
+            mac=self.mac,
+            dbm=self.dBm,
+            ssid=self.ssid,
+            oui=self.oui,
+        )

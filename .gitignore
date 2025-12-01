@@ -4,6 +4,7 @@ knownlist.json
 .env
 *.code-workspace
 CLAUDE.md
+ROADMAP.md
 
 # Python
 __pycache__/
