@@ -57,6 +57,21 @@ mkdir -p /opt/probe-sniffer
 mkdir -p /var/lib/probe-sniffer
 mkdir -p /var/log/probe-sniffer
 
+# Configure passwordless sudo for deployment operations
+echo "Configuring passwordless sudo for ${DEPLOY_USER}..."
+cat > /etc/sudoers.d/probe-sniffer << EOF
+# Probe Sniffer deployment permissions
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /bin/mv /tmp/probe-sniffer.service /tmp/probe-sniffer-api.service /etc/systemd/system/
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart probe-sniffer
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart probe-sniffer-api
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart probe-sniffer probe-sniffer-api
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl status probe-sniffer*
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active probe-sniffer*
+${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/journalctl*
+EOF
+chmod 0440 /etc/sudoers.d/probe-sniffer
+
 # Set ownership so deploy user can write
 echo "Setting ownership to ${DEPLOY_USER}..."
 chown -R ${DEPLOY_USER}:${DEPLOY_USER} /opt/probe-sniffer

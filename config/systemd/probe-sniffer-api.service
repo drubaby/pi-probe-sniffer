@@ -1,0 +1,16 @@
+[Unit]
+Description=PiSniffer API Server
+After=network.target
+
+[Service]
+Type=simple
+User={{DEPLOY_USER}}
+WorkingDirectory=/opt/probe-sniffer
+Environment="DATABASE_PATH=/var/lib/probe-sniffer/probes.db"
+Environment="LOG_PATH=/var/log/probe-sniffer/sniffer.log"
+ExecStart=/usr/local/bin/uv run -- uvicorn probe_sniffer.api.app:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -55,16 +55,6 @@ class Probe:
             ]
         )
 
-    def to_supabase(self) -> str:
-        return {
-            "timestamp": self.timestamp,
-            "mac": self.mac,
-            "name": self.device_name,
-            "rssi": self.dBm,
-            "oui": self.oui,
-            "ssid": self.ssid,
-        }
-
     def to_sighting_dto(self) -> SightingDTO:
         """
         Convert Probe to SightingDTO for storage layer.

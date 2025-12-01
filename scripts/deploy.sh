@@ -37,15 +37,35 @@ ssh ${REMOTE} "cd ${REMOTE_PATH} && \
         echo 'Dependencies up to date'; \
     fi"
 
-# Restart service
-echo "Restarting service..."
-ssh ${REMOTE} "sudo systemctl restart probe-sniffer"
+# Generate systemd service files from templates
+echo "Generating service files..."
+mkdir -p /tmp/probe-sniffer-deploy
+sed "s/{{DEPLOY_USER}}/${DEPLOY_USER}/g" \
+    config/systemd/probe-sniffer-api.service > /tmp/probe-sniffer-deploy/probe-sniffer-api.service
+
+# Copy service files to remote and install
+echo "Installing systemd services..."
+scp /tmp/probe-sniffer-deploy/*.service ${REMOTE}:/tmp/
+scp config/systemd/probe-sniffer.service ${REMOTE}:/tmp/
+ssh ${REMOTE} "sudo mv /tmp/probe-sniffer.service /tmp/probe-sniffer-api.service /etc/systemd/system/ && \
+    sudo systemctl daemon-reload"
+
+# Cleanup
+rm -rf /tmp/probe-sniffer-deploy
+
+# Restart services
+echo "Restarting services..."
+ssh ${REMOTE} "sudo systemctl restart probe-sniffer probe-sniffer-api"
 
 sleep 2
 
 # Show status
 echo ""
+echo "Sniffer status:"
 ssh ${REMOTE} "sudo systemctl --no-pager status probe-sniffer" || true
+echo ""
+echo "API status:"
+ssh ${REMOTE} "sudo systemctl --no-pager status probe-sniffer-api" || true
 
 echo ""
 echo "Deployment complete."

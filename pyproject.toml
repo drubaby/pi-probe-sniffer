@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "probe-sniffer"
 version = "0.2.0"
 description = "WiFi probe request sniffer with device fingerprinting"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = {text = "GPL-3.0"}
 
 dependencies = [
@@ -14,6 +14,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "paho-mqtt>=2.0.0",
     "pytz>=2024.1",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
 ]
 
 [project.optional-dependencies]
