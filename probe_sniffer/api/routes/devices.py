@@ -19,6 +19,26 @@ def list_devices(is_trusted: bool | None = None):
         is_trusted: Filter by trusted status (true/false/null for all)
     """
     devices = get_all_devices(is_trusted=is_trusted)
+
+    # Enrich devices with OUI and SSIDs from sightings
+    with get_cursor() as cursor:
+        for device in devices:
+            # Get most recent OUI for this device
+            cursor.execute(
+                "SELECT oui FROM sightings WHERE mac = ? AND oui IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+                (device["mac"],)
+            )
+            oui_row = cursor.fetchone()
+            device["oui"] = oui_row["oui"] if oui_row else None
+
+            # Get unique SSIDs this device has probed for
+            cursor.execute(
+                "SELECT DISTINCT ssid FROM sightings WHERE mac = ? AND ssid IS NOT NULL AND ssid != '' ORDER BY ssid",
+                (device["mac"],)
+            )
+            ssid_rows = cursor.fetchall()
+            device["ssids"] = [row["ssid"] for row in ssid_rows]
+
     return devices
 
 
@@ -34,7 +54,7 @@ def get_device_details(mac: str):
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
-    # Get statistics
+    # Get statistics and enrich with OUI/SSIDs
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT COUNT(*) as count, AVG(dbm) as avg_dbm FROM sightings WHERE mac = ?",
@@ -42,10 +62,26 @@ def get_device_details(mac: str):
         )
         stats = cursor.fetchone()
 
+        # Get most recent OUI
+        cursor.execute(
+            "SELECT oui FROM sightings WHERE mac = ? AND oui IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+            (mac,)
+        )
+        oui_row = cursor.fetchone()
+
+        # Get unique SSIDs
+        cursor.execute(
+            "SELECT DISTINCT ssid FROM sightings WHERE mac = ? AND ssid IS NOT NULL AND ssid != '' ORDER BY ssid",
+            (mac,)
+        )
+        ssid_rows = cursor.fetchall()
+
     return {
         **device,
         "total_sightings": stats["count"],
         "avg_signal_dbm": stats["avg_dbm"],
+        "oui": oui_row["oui"] if oui_row else None,
+        "ssids": [row["ssid"] for row in ssid_rows],
     }
 
 
@@ -73,6 +109,26 @@ def update_device_info(mac: str, device_update: DeviceUpdate):
         is_trusted=device_update.is_trusted,
     )
 
-    # Return updated device
+    # Return updated device with OUI and SSIDs
     updated = get_device(mac)
-    return updated
+
+    with get_cursor() as cursor:
+        # Get most recent OUI
+        cursor.execute(
+            "SELECT oui FROM sightings WHERE mac = ? AND oui IS NOT NULL ORDER BY timestamp DESC LIMIT 1",
+            (mac,)
+        )
+        oui_row = cursor.fetchone()
+
+        # Get unique SSIDs
+        cursor.execute(
+            "SELECT DISTINCT ssid FROM sightings WHERE mac = ? AND ssid IS NOT NULL AND ssid != '' ORDER BY ssid",
+            (mac,)
+        )
+        ssid_rows = cursor.fetchall()
+
+    return {
+        **updated,
+        "oui": oui_row["oui"] if oui_row else None,
+        "ssids": [row["ssid"] for row in ssid_rows],
+    }

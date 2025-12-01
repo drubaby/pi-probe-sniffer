@@ -1,63 +1,63 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, type Device } from '$lib/api/client';
+	import { api } from '$lib/api/client';
 
-	let devices: Device[] = [];
+	let deviceCount = 0;
+	let trustedCount = 0;
 	let loading = true;
-	let error = '';
 
 	onMount(async () => {
 		try {
-			devices = await api.getDevices();
-			loading = false;
+			const devices = await api.getDevices();
+			deviceCount = devices.length;
+			trustedCount = devices.filter((d) => d.is_trusted).length;
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to fetch devices';
+			console.error('Failed to load stats:', e);
+		} finally {
 			loading = false;
 		}
 	});
 </script>
 
 <div class="container">
-	<h1>PiSniffer - API Connection Test</h1>
+	<header>
+		<h1>PiSniffer</h1>
+		<p class="tagline">WiFi Probe Request Monitor</p>
+	</header>
 
-	{#if loading}
-		<p>Loading devices...</p>
-	{:else if error}
-		<div class="error">
-			<p>❌ Error: {error}</p>
-			<p>Make sure the API is running at http://192.168.0.4:8000</p>
+	{#if !loading}
+		<div class="stats">
+			<div class="stat-card">
+				<div class="stat-value">{deviceCount}</div>
+				<div class="stat-label">Total Devices</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-value">{trustedCount}</div>
+				<div class="stat-label">Trusted</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-value">{deviceCount - trustedCount}</div>
+				<div class="stat-label">Unknown</div>
+			</div>
 		</div>
-	{:else}
-		<div class="success">
-			<p>✅ API Connection Successful!</p>
-			<p>Found {devices.length} devices</p>
-		</div>
-
-		<h2>Devices</h2>
-		<table>
-			<thead>
-				<tr>
-					<th>MAC</th>
-					<th>Name</th>
-					<th>Trusted</th>
-					<th>Last Seen</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each devices.slice(0, 10) as device}
-					<tr>
-						<td>{device.mac}</td>
-						<td>{device.name || '(unnamed)'}</td>
-						<td>{device.is_trusted ? '✓' : '✗'}</td>
-						<td>{device.last_seen}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-		{#if devices.length > 10}
-			<p>Showing first 10 of {devices.length} devices</p>
-		{/if}
 	{/if}
+
+	<nav class="nav-cards">
+		<a href="/devices" class="nav-card">
+			<h2>📱 Devices</h2>
+			<p>Manage and identify WiFi probe devices</p>
+		</a>
+
+		<div class="nav-card disabled">
+			<h2>📊 Live Feed</h2>
+			<p>Real-time probe stream (coming soon)</p>
+		</div>
+
+		<div class="nav-card disabled">
+			<h2>📈 Dashboard</h2>
+			<p>Statistics and insights (coming soon)</p>
+		</div>
+	</nav>
 </div>
 
 <style>
@@ -67,45 +67,87 @@
 		padding: 2rem;
 	}
 
+	header {
+		text-align: center;
+		margin-bottom: 3rem;
+	}
+
 	h1 {
-		color: #333;
+		margin: 0;
+		font-size: 3rem;
+		color: #1a1a1a;
 	}
 
-	.error {
-		background: #fee;
-		border: 1px solid #fcc;
-		padding: 1rem;
-		border-radius: 4px;
-		color: #c00;
+	.tagline {
+		margin: 0.5rem 0 0;
+		color: #666;
+		font-size: 1.2rem;
 	}
 
-	.success {
-		background: #efe;
-		border: 1px solid #cfc;
-		padding: 1rem;
-		border-radius: 4px;
-		color: #060;
+	.stats {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+		margin-bottom: 3rem;
 	}
 
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 1rem;
+	.stat-card {
+		background: white;
+		padding: 2rem;
+		border-radius: 8px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		text-align: center;
 	}
 
-	th,
-	td {
-		text-align: left;
-		padding: 0.5rem;
-		border-bottom: 1px solid #ddd;
+	.stat-value {
+		font-size: 3rem;
+		font-weight: bold;
+		color: #007bff;
 	}
 
-	th {
-		background: #f5f5f5;
-		font-weight: 600;
+	.stat-label {
+		margin-top: 0.5rem;
+		color: #666;
+		font-size: 0.9rem;
+		text-transform: uppercase;
+		letter-spacing: 1px;
 	}
 
-	tr:hover {
-		background: #fafafa;
+	.nav-cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 1.5rem;
+	}
+
+	.nav-card {
+		background: white;
+		padding: 2rem;
+		border-radius: 8px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		text-decoration: none;
+		color: inherit;
+		transition: all 0.2s;
+		border: 2px solid transparent;
+	}
+
+	.nav-card:not(.disabled):hover {
+		transform: translateY(-4px);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+		border-color: #007bff;
+	}
+
+	.nav-card.disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.nav-card h2 {
+		margin: 0 0 0.5rem;
+		font-size: 1.5rem;
+	}
+
+	.nav-card p {
+		margin: 0;
+		color: #666;
 	}
 </style>

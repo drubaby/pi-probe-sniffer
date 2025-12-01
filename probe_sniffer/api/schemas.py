@@ -10,6 +10,8 @@ class Device(BaseModel):
     first_seen: str
     last_seen: str
     is_trusted: bool = False
+    oui: str | None = None  # Manufacturer from OUI lookup
+    ssids: list[str] = []  # Unique SSIDs probed
 
     class Config:
         from_attributes = True  # Allows conversion from sqlite3.Row
