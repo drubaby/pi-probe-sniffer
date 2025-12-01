@@ -15,10 +15,14 @@ class Device(BaseModel):
         from_attributes = True  # Allows conversion from sqlite3.Row
 
 
-class DeviceUpdate(Device):
-    """Fields that can be updated via API"""
+class DeviceUpdate(BaseModel):
+    """Fields that can be updated via API - all optional"""
 
-    pass
+    name: str | None = None
+    is_trusted: bool | None = None
+    mac: str | None = None
+    first_seen: str | None = None
+    last_seen: str | None = None
 
 
 class DeviceWithStats(Device):

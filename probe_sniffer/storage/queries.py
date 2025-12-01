@@ -143,8 +143,8 @@ def update_device(mac: str, name: str | None = None, is_trusted: bool | None = N
 
     Args:
         mac: Device MAC address
-        name: New name (None to keep unchanged)
-        is_trusted: New trusted status (None to keep unchanged)
+        name: New name (None to skip update)
+        is_trusted: New trusted status (None to skip update)
     """
     with get_cursor() as cursor:
         # Build dynamic update query

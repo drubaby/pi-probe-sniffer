@@ -53,6 +53,18 @@ ssh ${REMOTE} "sudo mv /tmp/probe-sniffer.service /tmp/probe-sniffer-api.service
 # Cleanup
 rm -rf /tmp/probe-sniffer-deploy
 
+# Fix database permissions so API can write
+echo "Setting database permissions..."
+DB_PATH="${DATABASE_PATH:-/var/lib/probe-sniffer/probes.db}"
+DB_DIR=$(dirname "$DB_PATH")
+ssh ${REMOTE} "sudo mkdir -p ${DB_DIR} && \
+    sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${DB_DIR} && \
+    sudo chmod 775 ${DB_DIR} && \
+    if [ -f ${DB_PATH} ]; then \
+        sudo chown ${DEPLOY_USER}:${DEPLOY_USER} ${DB_PATH} && \
+        sudo chmod 664 ${DB_PATH}; \
+    fi"
+
 # Restart services
 echo "Restarting services..."
 ssh ${REMOTE} "sudo systemctl restart probe-sniffer probe-sniffer-api"

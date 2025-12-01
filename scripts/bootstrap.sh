@@ -53,13 +53,32 @@ ssh ${REMOTE} "cd ${REMOTE_PATH} && \
     uv venv && \
     uv pip install -e ."
 
-# Step 5: Install systemd service + passwordless sudo
+# Step 5: Setup database directory with correct permissions
 echo ""
-echo "[5/5] Installing systemd service..."
+echo "[5/7] Setting up database directory..."
+ssh ${REMOTE} "sudo mkdir -p ${DATABASE_PATH%/*} && \
+    sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${DATABASE_PATH%/*} && \
+    sudo chmod 775 ${DATABASE_PATH%/*}"
+
+# Step 6: Install systemd services
+echo ""
+echo "[6/7] Installing systemd services..."
+# Generate API service file with correct user
+mkdir -p /tmp/probe-sniffer-bootstrap
+sed "s/{{DEPLOY_USER}}/${DEPLOY_USER}/g" \
+    config/systemd/probe-sniffer-api.service > /tmp/probe-sniffer-bootstrap/probe-sniffer-api.service
+scp /tmp/probe-sniffer-bootstrap/probe-sniffer-api.service ${REMOTE}:/tmp/
+rm -rf /tmp/probe-sniffer-bootstrap
+
 ssh -t ${REMOTE} "sudo cp ${REMOTE_PATH}/config/systemd/probe-sniffer.service /etc/systemd/system/ && \
+    sudo mv /tmp/probe-sniffer-api.service /etc/systemd/system/ && \
     sudo systemctl daemon-reload && \
-    sudo systemctl enable probe-sniffer && \
-    echo '${DEPLOY_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart probe-sniffer, /usr/bin/systemctl stop probe-sniffer, /usr/bin/systemctl start probe-sniffer, /usr/bin/systemctl status probe-sniffer, /usr/bin/systemctl is-active probe-sniffer, /usr/bin/journalctl' | sudo tee /etc/sudoers.d/probe-sniffer && \
+    sudo systemctl enable probe-sniffer probe-sniffer-api"
+
+# Step 7: Configure passwordless sudo (simpler pattern)
+echo ""
+echo "[7/7] Configuring passwordless sudo..."
+ssh -t ${REMOTE} "echo '${DEPLOY_USER} ALL=(ALL) NOPASSWD: /bin/systemctl, /bin/journalctl, /bin/chown, /bin/chmod, /bin/mkdir' | sudo tee /etc/sudoers.d/probe-sniffer && \
     sudo chmod 0440 /etc/sudoers.d/probe-sniffer"
 
 echo ""
