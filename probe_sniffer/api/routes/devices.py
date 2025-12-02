@@ -20,7 +20,7 @@ def list_devices(is_trusted: bool | None = None):
     """
     devices = get_all_devices(is_trusted=is_trusted)
 
-    # Enrich devices with OUI and SSIDs from sightings
+    # Enrich devices with OUI, SSIDs, and sighting count from sightings
     with get_cursor() as cursor:
         for device in devices:
             # Get most recent OUI for this device
@@ -38,6 +38,14 @@ def list_devices(is_trusted: bool | None = None):
             )
             ssid_rows = cursor.fetchall()
             device["ssids"] = [row["ssid"] for row in ssid_rows]
+
+            # Get total sightings count
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM sightings WHERE mac = ?",
+                (device["mac"],)
+            )
+            count_row = cursor.fetchone()
+            device["total_sightings"] = count_row["count"] if count_row else 0
 
     return devices
 
@@ -127,8 +135,16 @@ def update_device_info(mac: str, device_update: DeviceUpdate):
         )
         ssid_rows = cursor.fetchall()
 
+        # Get total sightings count
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM sightings WHERE mac = ?",
+            (mac,)
+        )
+        count_row = cursor.fetchone()
+
     return {
         **updated,
         "oui": oui_row["oui"] if oui_row else None,
         "ssids": [row["ssid"] for row in ssid_rows],
+        "total_sightings": count_row["count"] if count_row else 0,
     }

@@ -13,6 +13,7 @@ export interface Device {
 	is_trusted: boolean;
 	oui?: string | null;
 	ssids?: string[];
+	total_sightings?: number;
 }
 
 export interface DeviceWithStats extends Device {

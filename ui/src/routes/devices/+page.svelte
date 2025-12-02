@@ -11,14 +11,15 @@
 	let searchQuery = '';
 	let ouiFilter = '';
 	let ssidFilter = '';
+	let minSightings = 0;
 
 	// Pagination
 	let currentPage = 1;
 	const itemsPerPage = 50;
 
 	// Sorting
-	type SortColumn = 'mac' | 'oui' | 'name' | 'last_seen' | 'is_trusted';
-	let sortColumn: SortColumn = 'last_seen';
+	type SortColumn = 'mac' | 'oui' | 'name' | 'total_sightings' | 'last_seen' | 'is_trusted';
+	let sortColumn: SortColumn = 'total_sightings';
 	let sortDirection: 'asc' | 'desc' = 'desc';
 
 	// Editing
@@ -99,6 +100,9 @@
 			// Filter by SSID
 			if (ssidFilter && (!d.ssids || !d.ssids.includes(ssidFilter))) return false;
 
+			// Filter by minimum sightings
+			if (minSightings > 0 && (d.total_sightings || 0) < minSightings) return false;
+
 			// Filter by search query
 			if (searchQuery) {
 				const query = searchQuery.toLowerCase();
@@ -127,6 +131,11 @@
 					const nameB = b.name || '';
 					comparison = nameA.localeCompare(nameB);
 					break;
+				case 'total_sightings':
+					const sightingsA = a.total_sightings || 0;
+					const sightingsB = b.total_sightings || 0;
+					comparison = sightingsA - sightingsB;
+					break;
 				case 'last_seen':
 					comparison = a.last_seen.localeCompare(b.last_seen);
 					break;
@@ -146,7 +155,7 @@
 	);
 
 	// Reset to page 1 when filters change
-	$: if (filterMode || searchQuery || ouiFilter || ssidFilter) {
+	$: if (filterMode || searchQuery || ouiFilter || ssidFilter || minSightings) {
 		currentPage = 1;
 	}
 
@@ -214,12 +223,47 @@
 			</select>
 		</div>
 
-		{#if ouiFilter || ssidFilter}
+		<div class="filter-group">
+			<label>Min Sightings:</label>
+			<div class="sightings-filter-btns">
+				<button
+					class="sightings-filter-btn"
+					class:active={minSightings === 0}
+					on:click={() => (minSightings = 0)}
+				>
+					All
+				</button>
+				<button
+					class="sightings-filter-btn"
+					class:active={minSightings === 50}
+					on:click={() => (minSightings = 50)}
+				>
+					50+
+				</button>
+				<button
+					class="sightings-filter-btn"
+					class:active={minSightings === 100}
+					on:click={() => (minSightings = 100)}
+				>
+					100+
+				</button>
+				<button
+					class="sightings-filter-btn"
+					class:active={minSightings === 200}
+					on:click={() => (minSightings = 200)}
+				>
+					200+
+				</button>
+			</div>
+		</div>
+
+		{#if ouiFilter || ssidFilter || minSightings > 0}
 			<button
 				class="clear-filters-btn"
 				on:click={() => {
 					ouiFilter = '';
 					ssidFilter = '';
+					minSightings = 0;
 				}}
 			>
 				Clear Filters
@@ -280,6 +324,14 @@
 					</th>
 					<th>Probed SSIDs</th>
 					<th>
+						<button class="sort-header" on:click={() => toggleSort('total_sightings')}>
+							Sightings
+							{#if sortColumn === 'total_sightings'}
+								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+							{/if}
+						</button>
+					</th>
+					<th>
 						<button class="sort-header" on:click={() => toggleSort('last_seen')}>
 							Last Seen
 							{#if sortColumn === 'last_seen'}
@@ -333,6 +385,9 @@
 							{:else}
 								<span class="no-ssids">(none)</span>
 							{/if}
+						</td>
+						<td class="sightings">
+							<span class="sightings-count">{device.total_sightings || 0}</span>
 						</td>
 						<td class="last-seen">{new Date(device.last_seen).toLocaleString()}</td>
 						<td class="trust-status">
@@ -534,6 +589,31 @@
 		background: #c82333;
 	}
 
+	.sightings-filter-btns {
+		display: flex;
+		gap: 0.25rem;
+	}
+
+	.sightings-filter-btn {
+		padding: 0.5rem 0.75rem;
+		border: 2px solid #ddd;
+		background: white;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 0.85rem;
+		transition: all 0.2s;
+	}
+
+	.sightings-filter-btn:hover {
+		border-color: #999;
+	}
+
+	.sightings-filter-btn.active {
+		background: #007bff;
+		color: white;
+		border-color: #007bff;
+	}
+
 	.loading,
 	.empty {
 		text-align: center;
@@ -667,6 +747,21 @@
 		font-size: 0.85rem;
 		color: #999;
 		font-style: italic;
+	}
+
+	.sightings {
+		text-align: center;
+		font-weight: 600;
+	}
+
+	.sightings-count {
+		display: inline-block;
+		padding: 0.25rem 0.75rem;
+		background: #e7f3ff;
+		color: #0056b3;
+		border-radius: 12px;
+		font-size: 0.9rem;
+		min-width: 50px;
 	}
 
 	.name-btn {
