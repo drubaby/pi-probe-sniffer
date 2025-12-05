@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, type Device } from '$lib/api/client';
+	import { api, formatEasternTime, type Device } from '$lib/api/client';
 
 	let devices: Device[] = [];
 	let loading = true;
@@ -389,7 +389,7 @@
 						<td class="sightings">
 							<span class="sightings-count">{device.total_sightings || 0}</span>
 						</td>
-						<td class="last-seen">{new Date(device.last_seen).toLocaleString()}</td>
+						<td class="last-seen">{formatEasternTime(device.last_seen)}</td>
 						<td class="trust-status">
 							{#if device.is_trusted}
 								<span class="badge trusted">✓ Trusted</span>

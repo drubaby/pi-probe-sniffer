@@ -5,6 +5,28 @@
 
 const API_BASE = 'http://192.168.0.4:8000';
 
+/**
+ * Format a timestamp string to Eastern Time
+ * Backend stores timestamps in UTC, so we need to parse them as UTC
+ */
+export function formatEasternTime(timestamp: string): string {
+	// Backend stores as 'YYYY-MM-DD HH:MM:SS' in UTC
+	// Add 'Z' suffix to indicate UTC if not already present
+	const utcTimestamp = timestamp.endsWith('Z') ? timestamp : timestamp + 'Z';
+	const date = new Date(utcTimestamp);
+
+	return date.toLocaleString('en-US', {
+		timeZone: 'America/New_York',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: true
+	});
+}
+
 export interface Device {
 	mac: string;
 	name: string | null;
@@ -60,6 +82,37 @@ export interface OverviewStats {
 		count: number;
 	}>;
 	probes_by_hour: number[]; // Last 24h
+}
+
+export interface DeviceIdentity {
+	identity_id: string;
+	alias: string | null;
+	alias_set_at: string | null;
+	ssid_signature: string | null;
+	first_seen: string;
+	last_seen: string;
+	total_sightings: number;
+}
+
+export interface Fingerprint {
+	fingerprint_id: string;
+	identity_id: string | null;
+	ie_data: string | null; // JSON string
+	first_seen: string;
+	last_seen: string;
+	sighting_count: number;
+}
+
+export interface FingerprintWithDetails extends Fingerprint {
+	ssid_signature: string[];
+	unique_mac_count: number;
+}
+
+export interface FingerprintsResponse {
+	fingerprints: Fingerprint[];
+	total: number;
+	limit: number;
+	offset: number;
 }
 
 export const api = {
@@ -130,6 +183,60 @@ export const api = {
 	async getOverviewStats(): Promise<OverviewStats> {
 		const res = await fetch(`${API_BASE}/stats/overview`);
 		if (!res.ok) throw new Error('Failed to fetch overview stats');
+		return res.json();
+	},
+
+	// Identities
+	async getIdentities(): Promise<DeviceIdentity[]> {
+		const res = await fetch(`${API_BASE}/identities/`);
+		if (!res.ok) throw new Error('Failed to fetch identities');
+		return res.json();
+	},
+
+	async getIdentity(identityId: string): Promise<DeviceIdentity> {
+		const res = await fetch(`${API_BASE}/identities/${identityId}`);
+		if (!res.ok) throw new Error('Failed to fetch identity');
+		return res.json();
+	},
+
+	async createIdentity(data: {
+		identity_id: string;
+		alias?: string;
+		fingerprint_ids?: string[];
+	}): Promise<DeviceIdentity> {
+		const res = await fetch(`${API_BASE}/identities/`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(data)
+		});
+		if (!res.ok) throw new Error('Failed to create identity');
+		return res.json();
+	},
+
+	async updateIdentityAlias(identityId: string, alias: string): Promise<DeviceIdentity> {
+		const res = await fetch(`${API_BASE}/identities/${identityId}/alias`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ alias })
+		});
+		if (!res.ok) throw new Error('Failed to update alias');
+		return res.json();
+	},
+
+	// Fingerprints
+	async getFingerprints(params: { limit?: number; offset?: number } = {}): Promise<FingerprintsResponse> {
+		const searchParams = new URLSearchParams();
+		if (params.limit) searchParams.set('limit', String(params.limit));
+		if (params.offset) searchParams.set('offset', String(params.offset));
+
+		const res = await fetch(`${API_BASE}/fingerprints?${searchParams}`);
+		if (!res.ok) throw new Error('Failed to fetch fingerprints');
+		return res.json();
+	},
+
+	async getFingerprint(fingerprintId: string): Promise<FingerprintWithDetails> {
+		const res = await fetch(`${API_BASE}/fingerprints/${fingerprintId}`);
+		if (!res.ok) throw new Error('Failed to fetch fingerprint');
 		return res.json();
 	}
 };
