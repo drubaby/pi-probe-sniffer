@@ -1,5 +1,6 @@
 """Database queries"""
 
+import json
 from datetime import datetime
 from probe_sniffer.storage.database import get_cursor
 from probe_sniffer.storage.dto import SightingDTO
@@ -73,6 +74,33 @@ def update_last_seen(mac: str):
         )
 
 
+def upsert_device_fingerprint(fingerprint_id: str, ie_data: list[dict] | None):
+    """
+    Create or update a device fingerprint record.
+
+    Args:
+        fingerprint_id: The IE fingerprint hash
+        ie_data: Full IE structure as list of dicts
+    """
+    if not fingerprint_id or fingerprint_id == "no_stable_ies":
+        return  # Skip invalid fingerprints
+
+    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    ie_data_json = json.dumps(ie_data) if ie_data else None
+
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO device_fingerprints (fingerprint_id, ie_data, first_seen, last_seen, sighting_count)
+            VALUES (?, ?, ?, ?, 1)
+            ON CONFLICT(fingerprint_id) DO UPDATE SET
+                last_seen = ?,
+                sighting_count = sighting_count + 1
+        """,
+            (fingerprint_id, ie_data_json, now, now, now),
+        )
+
+
 def log_sighting(sighting: SightingDTO):
     """
     Log a probe request sighting to the database.
@@ -85,12 +113,16 @@ def log_sighting(sighting: SightingDTO):
     # Ensure device exists first (for foreign key constraint)
     update_last_seen(sighting.mac)
 
+    # Upsert device fingerprint if we have IE data
+    if sighting.ie_fingerprint and sighting.ie_data:
+        upsert_device_fingerprint(sighting.ie_fingerprint, sighting.ie_data)
+
     # Then log the sighting
     with get_cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO sightings (timestamp, mac, rssi, dbm, ssid, oui)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO sightings (timestamp, mac, rssi, dbm, ssid, oui, ie_fingerprint)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 now,
@@ -99,6 +131,7 @@ def log_sighting(sighting: SightingDTO):
                 sighting.dbm,  # dbm as integer for numeric queries
                 sighting.ssid,
                 sighting.oui,
+                sighting.ie_fingerprint,
             ),
         )
 
@@ -222,3 +255,131 @@ def get_recent_sightings(limit: int = 50) -> list[dict]:
             (limit,)
         )
         return [dict(row) for row in cursor.fetchall()]
+
+
+def create_device_identity(
+    identity_id: str,
+    alias: str | None = None,
+    fingerprint_ids: list[str] | None = None
+) -> dict:
+    """
+    Create a new device identity.
+
+    Args:
+        identity_id: Unique identifier for the device identity
+        alias: User-friendly name for the device
+        fingerprint_ids: List of fingerprint IDs to link to this identity
+
+    Returns:
+        The created device identity dict
+    """
+    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+
+    with get_cursor() as cursor:
+        # Create the identity
+        cursor.execute(
+            """
+            INSERT INTO device_identities (identity_id, alias, alias_set_at, first_seen, last_seen, total_sightings)
+            VALUES (?, ?, ?, ?, ?, 0)
+        """,
+            (identity_id, alias, now if alias else None, now, now),
+        )
+
+        # Link fingerprints to this identity if provided
+        if fingerprint_ids:
+            for fingerprint_id in fingerprint_ids:
+                cursor.execute(
+                    """
+                    UPDATE device_fingerprints
+                    SET identity_id = ?
+                    WHERE fingerprint_id = ?
+                """,
+                    (identity_id, fingerprint_id),
+                )
+
+        # Get and return the created identity
+        cursor.execute(
+            "SELECT * FROM device_identities WHERE identity_id = ?", (identity_id,)
+        )
+        return dict(cursor.fetchone())
+
+
+def update_device_identity_alias(identity_id: str, alias: str) -> dict | None:
+    """
+    Update the alias for a device identity.
+
+    Args:
+        identity_id: The device identity ID
+        alias: New alias
+
+    Returns:
+        Updated device identity dict or None if not found
+    """
+    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE device_identities
+            SET alias = ?, alias_set_at = ?
+            WHERE identity_id = ?
+        """,
+            (alias, now, identity_id),
+        )
+
+        if cursor.rowcount == 0:
+            return None
+
+        cursor.execute(
+            "SELECT * FROM device_identities WHERE identity_id = ?", (identity_id,)
+        )
+        return dict(cursor.fetchone())
+
+
+def get_device_identity(identity_id: str) -> dict | None:
+    """
+    Get a device identity by ID.
+
+    Args:
+        identity_id: The device identity ID
+
+    Returns:
+        Device identity dict or None if not found
+    """
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT * FROM device_identities WHERE identity_id = ?", (identity_id,)
+        )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def get_all_device_identities() -> list[dict]:
+    """
+    Get all device identities.
+
+    Returns:
+        List of device identity dicts
+    """
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM device_identities ORDER BY last_seen DESC")
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def link_fingerprint_to_identity(fingerprint_id: str, identity_id: str):
+    """
+    Link a fingerprint to a device identity.
+
+    Args:
+        fingerprint_id: The fingerprint hash
+        identity_id: The device identity ID
+    """
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE device_fingerprints
+            SET identity_id = ?
+            WHERE fingerprint_id = ?
+        """,
+            (identity_id, fingerprint_id),
+        )

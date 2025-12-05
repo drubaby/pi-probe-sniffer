@@ -22,6 +22,28 @@ CREATE TABLE IF NOT EXISTS sightings (
     FOREIGN KEY (mac) REFERENCES devices(mac)
 );
 
+-- Device identities: logical device grouping (handles IE fingerprint drift)
+CREATE TABLE IF NOT EXISTS device_identities (
+    identity_id TEXT PRIMARY KEY,
+    alias TEXT,                    -- User-friendly name (NULL if unidentified)
+    alias_set_at TEXT,             -- When user labeled it (NULL if never)
+    ssid_signature TEXT,           -- JSON array of SSIDs device probes for
+    first_seen TEXT NOT NULL,      -- ISO 8601: 'YYYY-MM-DD HH:MM:SS'
+    last_seen TEXT NOT NULL,       -- ISO 8601: 'YYYY-MM-DD HH:MM:SS'
+    total_sightings INTEGER DEFAULT 0
+);
+
+-- Device fingerprints: physical IE fingerprints (multiple per identity)
+CREATE TABLE IF NOT EXISTS device_fingerprints (
+    fingerprint_id TEXT PRIMARY KEY,
+    identity_id TEXT,              -- Link to logical device (NULL if unassigned)
+    ie_data JSON,                  -- Full IE structure for debugging
+    first_seen TEXT NOT NULL,      -- ISO 8601: 'YYYY-MM-DD HH:MM:SS'
+    last_seen TEXT NOT NULL,       -- ISO 8601: 'YYYY-MM-DD HH:MM:SS'
+    sighting_count INTEGER DEFAULT 0,
+    FOREIGN KEY (identity_id) REFERENCES device_identities(identity_id)
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_sightings_timestamp
     ON sightings(timestamp);
@@ -31,4 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_sightings_mac
 
 CREATE INDEX IF NOT EXISTS idx_devices_trusted
     ON devices(is_trusted);
+
+CREATE INDEX IF NOT EXISTS idx_fingerprints_identity
+    ON device_fingerprints(identity_id);
 """

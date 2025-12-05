@@ -160,11 +160,16 @@ def probe_log_build(logger: logging):
                     str(probe_utils.get_channel_number(radio)),
                     MAC.lower(),
                 ]
+                # Extract IE fingerprint for device identification
+                ie_fingerprint, ie_data = probe_utils.extract_ie_fingerprint(packet)
+
                 probe_class = Probe(
                     log_time,
                     probe_utils.get_dBm(radio),
                     probe_utils.get_channel_number(radio),
                     MAC.lower(),
+                    ie_fingerprint=ie_fingerprint,
+                    ie_data=ie_data,
                 )
 
                 if OUIMEM.get(clientOUI) is not None:

@@ -49,9 +49,46 @@ def get_cursor():
         conn.close()
 
 
+def migrate_to_fingerprinting():
+    """
+    Add fingerprinting columns to existing sightings table.
+    Safe to run multiple times (idempotent).
+    """
+    with get_cursor() as cursor:
+        # Check if columns already exist
+        cursor.execute("PRAGMA table_info(sightings)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        # Add ie_fingerprint column if missing
+        if 'ie_fingerprint' not in columns:
+            cursor.execute("ALTER TABLE sightings ADD COLUMN ie_fingerprint TEXT")
+            print("✓ Added ie_fingerprint column to sightings table")
+
+        # Add identity_id column if missing
+        if 'identity_id' not in columns:
+            cursor.execute(
+                "ALTER TABLE sightings ADD COLUMN identity_id TEXT "
+                "REFERENCES device_identities(identity_id)"
+            )
+            print("✓ Added identity_id column to sightings table")
+
+        # Create indexes for new columns
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sightings_identity "
+            "ON sightings(identity_id)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sightings_fingerprint "
+            "ON sightings(ie_fingerprint)"
+        )
+
+
 def init_database():
     """Initialize db schema if it doesn't exist."""
     from probe_sniffer.storage.schema import SCHEMA
 
     with get_cursor() as cursor:
         cursor.executescript(SCHEMA)
+
+    # Run migration to add fingerprinting columns
+    migrate_to_fingerprinting()

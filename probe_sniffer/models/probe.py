@@ -16,6 +16,8 @@ class Probe:
         oui="Unknown OUI",
         ssid="Undirected Probe",
         device_name="",
+        ie_fingerprint: str | None = None,
+        ie_data: list[dict] | None = None,
     ) -> None:
         self.timestamp = timestamp
         self.dBm = dBm
@@ -24,6 +26,8 @@ class Probe:
         self.oui = oui
         self.ssid = ssid
         self.device_name = device_name
+        self.ie_fingerprint = ie_fingerprint
+        self.ie_data = ie_data
 
     def mqtt_json(self) -> json:
         """
@@ -67,4 +71,6 @@ class Probe:
             dbm=self.dBm,
             ssid=self.ssid,
             oui=self.oui,
+            ie_fingerprint=self.ie_fingerprint,
+            ie_data=self.ie_data,
         )

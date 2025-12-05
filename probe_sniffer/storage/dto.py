@@ -13,3 +13,5 @@ class SightingDTO:
     dbm: int
     ssid: str
     oui: str
+    ie_fingerprint: str | None = None  # IE hash for device fingerprinting
+    ie_data: list[dict] | None = None  # Full IE structure for device_fingerprints table

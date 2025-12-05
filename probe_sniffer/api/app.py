@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from probe_sniffer.api.routes import devices, sightings
+from probe_sniffer.api.routes import devices, sightings, identities, fingerprints
 
 app = FastAPI(
     title="probe_sniffer API",
@@ -19,6 +19,8 @@ app.add_middleware(
 
 app.include_router(devices.router)
 app.include_router(sightings.router)
+app.include_router(identities.router)
+app.include_router(fingerprints.router)
 
 
 @app.get("/")
