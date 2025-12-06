@@ -1,19 +1,19 @@
 import argparse
 import csv
-import json
 import logging
+import os
 import random
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
-from logging.handlers import RotatingFileHandler
 
+from dotenv import load_dotenv
 from scapy.all import sniff, Dot11ProbeReq
 from paho.mqtt import client as mqtt_client, enums as paho_enums
 
 from probe_sniffer import config
 from probe_sniffer.storage.database import init_database
-from probe_sniffer.storage.queries import get_trusted_devices, log_sighting
+from probe_sniffer.storage.queries import get_trusted_devices, log_sighting, should_notify_fingerprint
+from probe_sniffer.notifications import discord as discord_notifier
 from probe_sniffer.utils import probe_utils, time_utils
 from probe_sniffer.models.probe import Probe
 
@@ -25,8 +25,6 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
 )
-# sniff_logs logs start times and errors
-import os
 
 sniff_logs = os.getenv("LOG_PATH", "/var/log/probe-sniffer/sniffer.log")
 general_logger = logging.getLogger("GENERAL")
@@ -38,10 +36,6 @@ Path(sniff_logs).parent.mkdir(parents=True, exist_ok=True)
 handler = logging.FileHandler(sniff_logs, mode="a")
 handler.setFormatter(formatter)
 general_logger.addHandler(handler)
-
-CSVDelim = ","
-
-# sb_client = supabase_utils.create_supabase_client()
 
 # Python Dict built to hold all known devices and known mac->manufacturer designations
 OUIMEM = {}
@@ -75,24 +69,7 @@ def build_oui_lookup() -> None:
                 OUIMEM[line[0].rstrip(" ")] = line[2]
 
 
-# JSON encode probe for mqtt. Probably should get refactored.
-def probe_json(probe: list):
-    return json.dumps(
-        {
-            "timestamp": probe[0],
-            "rssi": probe[1],
-            "channel": probe[2],
-            "MAC": probe[3],
-            "clientOUI": probe[4],
-            "BSSID": probe[5],
-        }
-    )
-
-
-"""
-Connect to MQTT broker
-"""
-# broker = os.getenv("MQTT_BROKER_URL")
+# MQTT Configuration
 broker = config.MQTT_BROKER_URL
 port = config.MQTT_BROKER_PORT
 topic = config.PROBE_TOPIC
@@ -130,8 +107,8 @@ def connect_mqtt():
     return client
 
 
-# Rotating logger and data formatting based on packet type
-def probe_log_build(logger: logging):
+# Creates packet handler with MQTT client in closure
+def create_packet_handler(logger: logging):
 
     # Instantiate MQTT Client
     C = connect_mqtt()
@@ -154,12 +131,6 @@ def probe_log_build(logger: logging):
                 # general_logger.info(f"{OUIMEM.get(MAC.lower())} seen")
                 pass
             else:
-                probe = [
-                    log_time,
-                    probe_utils.rssi(radio),
-                    str(probe_utils.get_channel_number(radio)),
-                    MAC.lower(),
-                ]
                 # Extract IE fingerprint for device identification
                 ie_fingerprint, ie_data = probe_utils.extract_ie_fingerprint(packet)
 
@@ -173,21 +144,17 @@ def probe_log_build(logger: logging):
                 )
 
                 if OUIMEM.get(clientOUI) is not None:
-                    probe.append(OUIMEM.get(clientOUI))
                     probe_class.oui = OUIMEM.get(clientOUI)
                 else:
                     if binaryRep[6:7] == "1":
-                        probe.append("Locally Assigned")
                         probe_class.oui = "Locally Assigned"
                     else:
-                        probe.append("Unknown OUI")
                         probe_class.oui = "Unknown OUI"
                 try:
                     if "\x00" not in packet[Dot11ProbeReq].info.decode("utf-8", "ignore"):
                         if str(packet.info):
                             decoded = str(packet.info.decode("utf-8", "ignore"))
                             BSSID = decoded if decoded != "" else "Undirected Probe"
-                            probe.append(BSSID)
                             probe_class.ssid = BSSID
                 except UnicodeDecodeError:
                     general_logger.error(
@@ -199,9 +166,24 @@ def probe_log_build(logger: logging):
                 logger.info(probe_class.to_csv())
                 # MQQT Client publishes json-encoded data to broker
                 C.publish(topic, probe_class.mqtt_json())
-                # Save sighting to SQLite database
+                # Save sighting to SQLite database and check for notifications
                 try:
-                    log_sighting(probe_class.to_sighting_dto())
+                    # log_sighting returns OLD fingerprint (before updating last_seen)
+                    old_fingerprint = log_sighting(probe_class.to_sighting_dto())
+
+                    # Check if Discord notification should be sent
+                    if old_fingerprint:
+                        should_send, notification_type = should_notify_fingerprint(old_fingerprint)
+
+                        if should_send:
+                            probe_data = {
+                                'mac': MAC.lower(),
+                                'dbm': probe_class.dBm,
+                                'ssid': probe_class.ssid,
+                                'oui': probe_class.oui,
+                            }
+                            discord_notifier.send_notification(old_fingerprint, probe_data, notification_type)
+
                 except Exception as e:
                     general_logger.error(f"Failed to save sighting: {e}")
 
@@ -224,15 +206,11 @@ def main():
     init_database()
 
     logger = logging.getLogger("PROBES")
-    # Output location
-    # handler = RotatingFileHandler(str(args.file) + ".csv")
-    # logger.addHandler(handler)
-    # logger.addHandler(logging.StreamHandler(sys.stdout))
 
     build_oui_lookup()
 
     try:
-        sniff(iface=args.monitor, prn=probe_log_build(logger), store=0)
+        sniff(iface=args.monitor, prn=create_packet_handler(logger), store=0)
     except Exception as e:
         general_logger.warning(type(e))
         general_logger.exception(e)

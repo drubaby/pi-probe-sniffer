@@ -13,17 +13,20 @@ REMOTE_PATH="${DEPLOY_PATH:-/opt/probe-sniffer}"
 
 echo "Deploying to ${REMOTE}..."
 
-# Sync code (exclude .env to protect production config)
+# Sync code
 echo "Syncing code..."
 rsync -avz --delete \
     --exclude='.git' \
     --exclude='__pycache__' \
     --exclude='*.pyc' \
-    --exclude='.env' \
     --exclude='logs/' \
     --exclude='.venv' \
     --exclude='*.egg-info' \
     ./ ${REMOTE}:${REMOTE_PATH}/
+
+# Sync .env file (contains Discord webhook and other app config)
+echo "Syncing .env..."
+rsync -avz .env ${REMOTE}:${REMOTE_PATH}/.env
 
 # Update Python dependencies (only if pyproject.toml changed)
 echo "Checking dependencies..."

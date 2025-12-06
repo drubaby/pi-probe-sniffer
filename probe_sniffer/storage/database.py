@@ -83,6 +83,24 @@ def migrate_to_fingerprinting():
         )
 
 
+def migrate_to_discord_notifications():
+    """
+    Add Discord notification column to device_fingerprints table.
+    Safe to run multiple times (idempotent).
+    """
+    with get_cursor() as cursor:
+        # Check if column already exists
+        cursor.execute("PRAGMA table_info(device_fingerprints)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        # Add notification_enabled column if missing
+        if 'notification_enabled' not in columns:
+            cursor.execute(
+                "ALTER TABLE device_fingerprints ADD COLUMN notification_enabled INTEGER DEFAULT 1"
+            )
+            print("✓ Added notification_enabled column to device_fingerprints table")
+
+
 def init_database():
     """Initialize db schema if it doesn't exist."""
     from probe_sniffer.storage.schema import SCHEMA
@@ -90,5 +108,6 @@ def init_database():
     with get_cursor() as cursor:
         cursor.executescript(SCHEMA)
 
-    # Run migration to add fingerprinting columns
+    # Run migrations
     migrate_to_fingerprinting()
+    migrate_to_discord_notifications()
