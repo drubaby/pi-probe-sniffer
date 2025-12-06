@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { api, formatEasternTime, type FingerprintWithDetails } from '$lib/api/client';
 
 	let fingerprint: FingerprintWithDetails | null = null;
 	let loading = true;
 	let error = '';
 
-	$: fingerprintId = $page.params.id;
+	$: fingerprintId = page.params.id;
 
 	onMount(async () => {
 		await loadFingerprint();
@@ -47,7 +47,7 @@
 	{:else if error}
 		<div class="error">
 			<p>❌ {error}</p>
-			<button on:click={loadFingerprint}>Retry</button>
+			<button onclick={loadFingerprint}>Retry</button>
 		</div>
 	{:else if fingerprint}
 		<header>

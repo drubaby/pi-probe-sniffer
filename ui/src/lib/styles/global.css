@@ -1,0 +1,252 @@
+/* Global styles for PiSniffer UI */
+
+/* Loading & Empty States */
+.loading,
+.empty {
+	text-align: center;
+	padding: 3rem;
+	color: #666;
+}
+
+.hint {
+	margin-top: 0.5rem;
+	font-size: 0.9rem;
+	color: #999;
+}
+
+/* Error States */
+.error {
+	background: #fee;
+	border: 1px solid #fcc;
+	padding: 1rem;
+	border-radius: 6px;
+	color: #c00;
+	text-align: center;
+}
+
+.error button {
+	margin-top: 0.5rem;
+}
+
+/* Cards */
+.card {
+	background: white;
+	border-radius: 8px;
+	padding: 1.5rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+	margin: 0 0 1rem;
+	font-size: 1.2rem;
+	color: #495057;
+}
+
+/* Tables */
+.data-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: white;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.data-table thead {
+	background: #f8f9fa;
+}
+
+.data-table th {
+	text-align: left;
+	padding: 0.75rem 1rem;
+	font-weight: 600;
+	color: #495057;
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.data-table td {
+	padding: 1rem;
+	border-top: 1px solid #dee2e6;
+}
+
+.data-table tr:hover {
+	background: #f8f9fa;
+}
+
+/* Badges */
+.badge {
+	display: inline-block;
+	padding: 0.25rem 0.75rem;
+	background: #e7f3ff;
+	color: #0056b3;
+	border-radius: 12px;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+/* SSID Badges */
+.ssid-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.ssid-badge {
+	display: inline-block;
+	padding: 0.5rem 1rem;
+	background: #e7f3ff;
+	color: #0056b3;
+	border-radius: 6px;
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 0.9rem;
+}
+
+/* Timestamps */
+.timestamp {
+	font-size: 0.85rem;
+	color: #6c757d;
+}
+
+/* Code & Monospace */
+code {
+	font-family: 'Monaco', 'Courier New', monospace;
+	background: #f8f9fa;
+	padding: 0.25rem 0.5rem;
+	border-radius: 4px;
+	font-size: 0.9rem;
+}
+
+/* No Value Placeholder */
+.no-value {
+	color: #999;
+	font-style: italic;
+}
+
+/* Buttons */
+button {
+	padding: 0.5rem 1rem;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.2s;
+}
+
+.btn-primary {
+	background: #007bff;
+	color: white;
+}
+
+.btn-primary:hover {
+	background: #0056b3;
+}
+
+.btn-save {
+	background: #28a745;
+	color: white;
+	margin-right: 0.5rem;
+}
+
+.btn-save:hover {
+	background: #218838;
+}
+
+.btn-cancel {
+	background: #6c757d;
+	color: white;
+}
+
+.btn-cancel:hover {
+	background: #5a6268;
+}
+
+.btn-view {
+	display: inline-block;
+	padding: 0.5rem 1rem;
+	background: #007bff;
+	color: white;
+	text-decoration: none;
+	border-radius: 4px;
+	font-size: 0.85rem;
+	transition: all 0.2s;
+}
+
+.btn-view:hover {
+	background: #0056b3;
+}
+
+/* Pagination */
+.pagination {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 2rem;
+	padding: 1rem;
+}
+
+.page-numbers {
+	display: flex;
+	gap: 0.25rem;
+	align-items: center;
+}
+
+.page-btn {
+	min-width: 40px;
+	padding: 0.5rem 1rem;
+	border: 1px solid #dee2e6;
+	background: white;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled):not(.active) {
+	background: #f8f9fa;
+	border-color: #007bff;
+}
+
+.page-btn.active {
+	background: #007bff;
+	color: white;
+	border-color: #007bff;
+	font-weight: 600;
+}
+
+.page-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.page-ellipsis {
+	padding: 0 0.5rem;
+	color: #6c757d;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+	margin-bottom: 1.5rem;
+}
+
+.breadcrumb a {
+	color: #007bff;
+	text-decoration: none;
+	font-size: 0.9rem;
+}
+
+.breadcrumb a:hover {
+	text-decoration: underline;
+}
+
+/* Results Count */
+.results {
+	margin-bottom: 1rem;
+}
+
+.count {
+	color: #666;
+	font-size: 0.9rem;
+}

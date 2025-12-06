@@ -1,6 +1,7 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
-	import { page } from '$app/stores';
+	import favicon from '$lib/assets/favicon.png';
+	import { page } from '$app/state';
+	import '$lib/styles/global.css';
 
 	let { children } = $props();
 </script>
@@ -14,12 +15,12 @@
 		<div class="nav-container">
 			<h1 class="logo">PiSniffer</h1>
 			<div class="nav-links">
-				<a href="/" class:active={$page.url.pathname === '/'}>Home</a>
-				<a href="/devices" class:active={$page.url.pathname.startsWith('/devices')}>Devices</a>
-				<a href="/fingerprints" class:active={$page.url.pathname.startsWith('/fingerprints')}>
+				<a href="/" class:active={page.url.pathname === '/'}>Home</a>
+				<a href="/devices" class:active={page.url.pathname.startsWith('/devices')}>Devices</a>
+				<a href="/fingerprints" class:active={page.url.pathname.startsWith('/fingerprints')}>
 					Fingerprints
 				</a>
-				<a href="/identities" class:active={$page.url.pathname.startsWith('/identities')}>
+				<a href="/identities" class:active={page.url.pathname.startsWith('/identities')}>
 					Identities
 				</a>
 			</div>
@@ -35,8 +36,9 @@
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-			'Open Sans', 'Helvetica Neue', sans-serif;
+		font-family:
+			-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+			'Helvetica Neue', sans-serif;
 		background: #f5f5f5;
 	}
 

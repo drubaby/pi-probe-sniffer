@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { api, formatEasternTime, type DeviceIdentity } from '$lib/api/client';
 
 	let identity: DeviceIdentity | null = null;
@@ -11,7 +11,7 @@
 	let editingAlias = false;
 	let editAlias = '';
 
-	$: identityId = $page.params.id;
+	$: identityId = page.params.id;
 
 	onMount(async () => {
 		await loadIdentity();
@@ -64,7 +64,7 @@
 	{:else if error}
 		<div class="error">
 			<p>❌ {error}</p>
-			<button on:click={loadIdentity}>Retry</button>
+			<button onclick={loadIdentity}>Retry</button>
 		</div>
 	{:else if identity}
 		<header>
@@ -92,10 +92,10 @@
 				</div>
 				<div class="header-actions">
 					{#if editingAlias}
-						<button class="btn-save" on:click={saveAlias}>Save</button>
-						<button class="btn-cancel" on:click={cancelEdit}>Cancel</button>
+						<button class="btn-save" onclick={saveAlias}>Save</button>
+						<button class="btn-cancel" onclick={cancelEdit}>Cancel</button>
 					{:else}
-						<button class="btn-edit" on:click={startEditAlias}>Edit Alias</button>
+						<button class="btn-edit" onclick={startEditAlias}>Edit Alias</button>
 					{/if}
 				</div>
 			</div>

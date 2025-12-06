@@ -81,8 +81,7 @@
 	}
 
 	// Get unique OUIs and SSIDs for filter dropdowns
-	$: uniqueOuis = Array.from(new Set(devices.map((d) => d.oui).filter((oui) => oui)))
-		.sort();
+	$: uniqueOuis = Array.from(new Set(devices.map((d) => d.oui).filter((oui) => oui))).sort();
 	$: uniqueSsids = Array.from(
 		new Set(devices.flatMap((d) => d.ssids || []).filter((ssid) => ssid))
 	).sort();
@@ -107,8 +106,7 @@
 			if (searchQuery) {
 				const query = searchQuery.toLowerCase();
 				return (
-					d.mac.toLowerCase().includes(query) ||
-					(d.name && d.name.toLowerCase().includes(query))
+					d.mac.toLowerCase().includes(query) || (d.name && d.name.toLowerCase().includes(query))
 				);
 			}
 
@@ -176,21 +174,21 @@
 			<button
 				class="filter-btn"
 				class:active={filterMode === 'all'}
-				on:click={() => (filterMode = 'all')}
+				onclick={() => (filterMode = 'all')}
 			>
 				All ({devices.length})
 			</button>
 			<button
 				class="filter-btn"
 				class:active={filterMode === 'untrusted'}
-				on:click={() => (filterMode = 'untrusted')}
+				onclick={() => (filterMode = 'untrusted')}
 			>
 				Unknown ({devices.filter((d) => !d.is_trusted).length})
 			</button>
 			<button
 				class="filter-btn"
 				class:active={filterMode === 'trusted'}
-				on:click={() => (filterMode = 'trusted')}
+				onclick={() => (filterMode = 'trusted')}
 			>
 				Trusted ({devices.filter((d) => d.is_trusted).length})
 			</button>
@@ -229,28 +227,28 @@
 				<button
 					class="sightings-filter-btn"
 					class:active={minSightings === 0}
-					on:click={() => (minSightings = 0)}
+					onclick={() => (minSightings = 0)}
 				>
 					All
 				</button>
 				<button
 					class="sightings-filter-btn"
 					class:active={minSightings === 50}
-					on:click={() => (minSightings = 50)}
+					onclick={() => (minSightings = 50)}
 				>
 					50+
 				</button>
 				<button
 					class="sightings-filter-btn"
 					class:active={minSightings === 100}
-					on:click={() => (minSightings = 100)}
+					onclick={() => (minSightings = 100)}
 				>
 					100+
 				</button>
 				<button
 					class="sightings-filter-btn"
 					class:active={minSightings === 200}
-					on:click={() => (minSightings = 200)}
+					onclick={() => (minSightings = 200)}
 				>
 					200+
 				</button>
@@ -260,7 +258,7 @@
 		{#if ouiFilter || ssidFilter || minSightings > 0}
 			<button
 				class="clear-filters-btn"
-				on:click={() => {
+				onclick={() => {
 					ouiFilter = '';
 					ssidFilter = '';
 					minSightings = 0;
@@ -276,13 +274,13 @@
 	{:else if error}
 		<div class="error">
 			<p>❌ {error}</p>
-			<button on:click={loadDevices}>Retry</button>
+			<button onclick={loadDevices}>Retry</button>
 		</div>
 	{:else if filteredDevices.length === 0}
 		<div class="empty">
 			<p>No devices found</p>
 			{#if searchQuery}
-				<button on:click={() => (searchQuery = '')}>Clear search</button>
+				<button onclick={() => (searchQuery = '')}>Clear search</button>
 			{/if}
 		</div>
 	{:else}
@@ -299,7 +297,7 @@
 			<thead>
 				<tr>
 					<th>
-						<button class="sort-header" on:click={() => toggleSort('mac')}>
+						<button class="sort-header" onclick={() => toggleSort('mac')}>
 							MAC Address
 							{#if sortColumn === 'mac'}
 								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -307,7 +305,7 @@
 						</button>
 					</th>
 					<th>
-						<button class="sort-header" on:click={() => toggleSort('oui')}>
+						<button class="sort-header" onclick={() => toggleSort('oui')}>
 							Manufacturer
 							{#if sortColumn === 'oui'}
 								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -315,7 +313,7 @@
 						</button>
 					</th>
 					<th>
-						<button class="sort-header" on:click={() => toggleSort('name')}>
+						<button class="sort-header" onclick={() => toggleSort('name')}>
 							Name
 							{#if sortColumn === 'name'}
 								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -324,7 +322,7 @@
 					</th>
 					<th>Probed SSIDs</th>
 					<th>
-						<button class="sort-header" on:click={() => toggleSort('total_sightings')}>
+						<button class="sort-header" onclick={() => toggleSort('total_sightings')}>
 							Sightings
 							{#if sortColumn === 'total_sightings'}
 								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -332,7 +330,7 @@
 						</button>
 					</th>
 					<th>
-						<button class="sort-header" on:click={() => toggleSort('last_seen')}>
+						<button class="sort-header" onclick={() => toggleSort('last_seen')}>
 							Last Seen
 							{#if sortColumn === 'last_seen'}
 								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -340,7 +338,7 @@
 						</button>
 					</th>
 					<th>
-						<button class="sort-header" on:click={() => toggleSort('is_trusted')}>
+						<button class="sort-header" onclick={() => toggleSort('is_trusted')}>
 							Trusted
 							{#if sortColumn === 'is_trusted'}
 								<span class="sort-icon">{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -360,14 +358,14 @@
 								<input
 									type="text"
 									bind:value={editName}
-									on:keydown={(e) => {
+									onkeydown={(e) => {
 										if (e.key === 'Enter') saveName(device.mac);
 										if (e.key === 'Escape') cancelEdit();
 									}}
 									autofocus
 								/>
 							{:else}
-								<button class="name-btn" on:click={() => startEdit(device)}>
+								<button class="name-btn" onclick={() => startEdit(device)}>
 									{device.name || '(unnamed)'}
 								</button>
 							{/if}
@@ -399,10 +397,10 @@
 						</td>
 						<td class="actions">
 							{#if editingDevice === device.mac}
-								<button class="btn-save" on:click={() => saveName(device.mac)}>Save</button>
-								<button class="btn-cancel" on:click={cancelEdit}>Cancel</button>
+								<button class="btn-save" onclick={() => saveName(device.mac)}>Save</button>
+								<button class="btn-cancel" onclick={cancelEdit}>Cancel</button>
 							{:else}
-								<button class="btn-toggle" on:click={() => toggleTrust(device)}>
+								<button class="btn-toggle" onclick={() => toggleTrust(device)}>
 									{device.is_trusted ? 'Untrust' : 'Trust'}
 								</button>
 							{/if}
@@ -417,7 +415,7 @@
 			<div class="pagination">
 				<button
 					class="page-btn"
-					on:click={() => goToPage(currentPage - 1)}
+					onclick={() => goToPage(currentPage - 1)}
 					disabled={currentPage === 1}
 				>
 					← Previous
@@ -425,14 +423,14 @@
 
 				<div class="page-numbers">
 					{#if currentPage > 2}
-						<button class="page-btn" on:click={() => goToPage(1)}>1</button>
+						<button class="page-btn" onclick={() => goToPage(1)}>1</button>
 						{#if currentPage > 3}
 							<span class="page-ellipsis">...</span>
 						{/if}
 					{/if}
 
 					{#if currentPage > 1}
-						<button class="page-btn" on:click={() => goToPage(currentPage - 1)}>
+						<button class="page-btn" onclick={() => goToPage(currentPage - 1)}>
 							{currentPage - 1}
 						</button>
 					{/if}
@@ -440,7 +438,7 @@
 					<button class="page-btn active">{currentPage}</button>
 
 					{#if currentPage < totalPages}
-						<button class="page-btn" on:click={() => goToPage(currentPage + 1)}>
+						<button class="page-btn" onclick={() => goToPage(currentPage + 1)}>
 							{currentPage + 1}
 						</button>
 					{/if}
@@ -449,7 +447,7 @@
 						{#if currentPage < totalPages - 2}
 							<span class="page-ellipsis">...</span>
 						{/if}
-						<button class="page-btn" on:click={() => goToPage(totalPages)}>
+						<button class="page-btn" onclick={() => goToPage(totalPages)}>
 							{totalPages}
 						</button>
 					{/if}
@@ -457,7 +455,7 @@
 
 				<button
 					class="page-btn"
-					on:click={() => goToPage(currentPage + 1)}
+					onclick={() => goToPage(currentPage + 1)}
 					disabled={currentPage === totalPages}
 				>
 					Next →

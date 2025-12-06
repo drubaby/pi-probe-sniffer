@@ -3,9 +3,11 @@ knownlist.json
 .realsync
 .env
 *.code-workspace
+.claude
 CLAUDE.md
 ROADMAP.md
 UI.md
+scripts/analyses/
 
 node_modules/
 
@@ -19,4 +21,4 @@ __pycache__/
 dist/
 build/
 *.egg
-
+.DS_Store

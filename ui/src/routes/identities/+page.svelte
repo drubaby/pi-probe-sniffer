@@ -58,7 +58,7 @@
 	{:else if error}
 		<div class="error">
 			<p>❌ {error}</p>
-			<button on:click={loadIdentities}>Retry</button>
+			<button onclick={loadIdentities}>Retry</button>
 		</div>
 	{:else if identities.length === 0}
 		<div class="empty">
@@ -98,7 +98,7 @@
 									autofocus
 								/>
 							{:else}
-								<button class="alias-btn" on:click={() => startEdit(identity)}>
+								<button class="alias-btn" onclick={() => startEdit(identity)}>
 									{#if identity.alias}
 										<span class="alias-name">{identity.alias}</span>
 									{:else}
@@ -115,10 +115,10 @@
 						</td>
 						<td class="actions">
 							{#if editingIdentity === identity.identity_id}
-								<button class="btn-save" on:click={() => saveAlias(identity.identity_id)}>
+								<button class="btn-save" onclick={() => saveAlias(identity.identity_id)}>
 									Save
 								</button>
-								<button class="btn-cancel" on:click={cancelEdit}>Cancel</button>
+								<button class="btn-cancel" onclick={cancelEdit}>Cancel</button>
 							{:else}
 								<a href="/identities/{identity.identity_id}" class="btn-view">View</a>
 							{/if}
