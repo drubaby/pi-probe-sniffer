@@ -26,6 +26,9 @@ logging.basicConfig(
     datefmt="%m/%d/%Y %I:%M:%S %p",
 )
 
+# Quiet noisy HTTP library loggers
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 sniff_logs = os.getenv("LOG_PATH", "/var/log/probe-sniffer/sniffer.log")
 general_logger = logging.getLogger("GENERAL")
 formatter = logging.Formatter(

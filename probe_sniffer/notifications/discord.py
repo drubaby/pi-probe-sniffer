@@ -6,6 +6,9 @@ from probe_sniffer import config
 
 logger = logging.getLogger("DISCORD")
 
+# Reusable session for connection pooling (HTTP keep-alive)
+_session = requests.Session()
+
 
 def send_notification(fingerprint: dict, probe_data: dict, notification_type: str) -> bool:
     """
@@ -47,7 +50,7 @@ def send_notification(fingerprint: dict, probe_data: dict, notification_type: st
             "username": "PiSniffer",
         }
 
-        response = requests.post(config.DISCORD_WEBHOOK_URL, json=payload, timeout=10)
+        response = _session.post(config.DISCORD_WEBHOOK_URL, json=payload, timeout=10)
         response.raise_for_status()
 
         logger.info(f"Discord notification sent: {notification_type} device")
