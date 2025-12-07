@@ -3,28 +3,12 @@
 import logging
 import discord
 from discord import ui
-from datetime import datetime, timezone
 
 from probe_sniffer import config
 from probe_sniffer.storage.queries import disable_fingerprint_notifications, set_fingerprint_alias
+from probe_sniffer.utils.time_utils import format_eastern, utc_now
 
 logger = logging.getLogger("DISCORD_BOT")
-
-
-def format_local_time(utc_timestamp_str: str) -> str:
-    """Convert UTC timestamp string from database to local time."""
-    if not utc_timestamp_str or utc_timestamp_str == "Unknown":
-        return "Unknown"
-
-    try:
-        # Parse the ISO format timestamp (stored as UTC in database)
-        utc_dt = datetime.fromisoformat(utc_timestamp_str).replace(tzinfo=timezone.utc)
-        # Convert to local timezone
-        local_dt = utc_dt.astimezone()
-        # Format: "Dec 07, 2:30:45 PM"
-        return local_dt.strftime("%b %d, %I:%M:%S %p")
-    except (ValueError, TypeError):
-        return utc_timestamp_str  # Return original if parsing fails
 
 
 class AliasModal(ui.Modal, title="Set Device Alias"):
@@ -83,7 +67,8 @@ def build_embed(fingerprint: dict, probe_data: dict, notification_type: str) -> 
         title = "🔄 Device Returned"
         color = discord.Color.green()
 
-    embed = discord.Embed(title=title, color=color, timestamp=datetime.utcnow())
+    # Use timezone-aware datetime so Discord correctly converts to viewer's timezone
+    embed = discord.Embed(title=title, color=color, timestamp=utc_now())
 
     embed.add_field(name="Manufacturer", value=probe_data.get("oui", "Unknown"), inline=True)
     embed.add_field(name="Signal", value=f"{probe_data.get('dbm', 'N/A')} dBm", inline=True)
@@ -91,12 +76,12 @@ def build_embed(fingerprint: dict, probe_data: dict, notification_type: str) -> 
         name="Sighting Count", value=str(fingerprint.get("sighting_count", 0)), inline=True
     )
     embed.add_field(
-        name="First Seen", value=format_local_time(fingerprint.get("first_seen")), inline=True
+        name="First Seen", value=format_eastern(fingerprint.get("first_seen")), inline=True
     )
 
     if notification_type == "returning":
         embed.add_field(
-            name="Last Seen", value=format_local_time(fingerprint.get("last_seen")), inline=True
+            name="Last Seen", value=format_eastern(fingerprint.get("last_seen")), inline=True
         )
 
     ssid = probe_data.get("ssid", "Undirected Probe")

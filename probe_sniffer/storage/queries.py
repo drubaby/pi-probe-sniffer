@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from probe_sniffer.storage.database import get_cursor
 from probe_sniffer.storage.dto import SightingDTO
+from probe_sniffer.utils.time_utils import UTC, utc_now, utc_now_iso
 
 
 def get_trusted_devices() -> list[str]:
@@ -22,7 +23,7 @@ def add_device(mac: str, name: str | None = None, is_trusted: bool = False):
         name: Optional friendly name for device
         is_trusted: Whether device should be filtered from logs
     """
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
 
     with get_cursor() as cursor:
         cursor.execute(
@@ -61,7 +62,7 @@ def update_last_seen(mac: str):
     Args:
         mac: Device MAC address
     """
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
 
     with get_cursor() as cursor:
         cursor.execute(
@@ -85,7 +86,7 @@ def upsert_device_fingerprint(fingerprint_id: str, ie_data: list[dict] | None):
     if not fingerprint_id or fingerprint_id == "no_stable_ies":
         return  # Skip invalid fingerprints
 
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
     ie_data_json = json.dumps(ie_data) if ie_data else None
 
     with get_cursor() as cursor:
@@ -152,8 +153,9 @@ def should_notify_fingerprint(fingerprint: dict) -> tuple[bool, str]:
     last_seen = fingerprint.get("last_seen")
     if last_seen:
         try:
-            last_seen_dt = datetime.fromisoformat(last_seen)
-            now = datetime.utcnow()
+            # Parse as UTC (database stores UTC timestamps)
+            last_seen_dt = datetime.fromisoformat(last_seen).replace(tzinfo=UTC)
+            now = utc_now()
             minutes_since = (now - last_seen_dt).total_seconds() / 60
 
             # If device was away for 10+ minutes, it's a new arrival
@@ -175,7 +177,7 @@ def log_sighting(sighting: SightingDTO) -> dict | None:
     Returns:
         OLD fingerprint dict (before update) for notification logic, or None
     """
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
 
     # Ensure device exists first (for foreign key constraint)
     update_last_seen(sighting.mac)
@@ -338,7 +340,7 @@ def create_device_identity(
     Returns:
         The created device identity dict
     """
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
 
     with get_cursor() as cursor:
         # Create the identity
@@ -378,7 +380,7 @@ def update_device_identity_alias(identity_id: str, alias: str) -> dict | None:
     Returns:
         Updated device identity dict or None if not found
     """
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
 
     with get_cursor() as cursor:
         cursor.execute(
@@ -464,7 +466,7 @@ def set_fingerprint_alias(fingerprint_id: str, alias: str) -> str:
     Returns:
         The identity_id (same as fingerprint_id for simplicity)
     """
-    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    now = utc_now_iso()
 
     with get_cursor() as cursor:
         # Check if fingerprint already has an identity
