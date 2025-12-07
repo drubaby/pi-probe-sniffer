@@ -16,7 +16,8 @@ dependencies = [
     "pytz>=2024.1",
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
-    "requests",
+    "requests>=2.32.0",
+    "discord>=2.3.2"
 ]
 
 [project.optional-dependencies]

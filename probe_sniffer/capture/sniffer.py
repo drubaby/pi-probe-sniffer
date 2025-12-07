@@ -3,6 +3,7 @@ import csv
 import logging
 import os
 import random
+import requests
 import sys
 from pathlib import Path
 
@@ -12,7 +13,11 @@ from paho.mqtt import client as mqtt_client, enums as paho_enums
 
 from probe_sniffer import config
 from probe_sniffer.storage.database import init_database
-from probe_sniffer.storage.queries import get_trusted_devices, log_sighting, should_notify_fingerprint
+from probe_sniffer.storage.queries import (
+    get_trusted_devices,
+    log_sighting,
+    should_notify_fingerprint,
+)
 from probe_sniffer.notifications import discord as discord_notifier
 from probe_sniffer.utils import probe_utils, time_utils
 from probe_sniffer.models.probe import Probe
@@ -180,12 +185,14 @@ def create_packet_handler(logger: logging):
 
                         if should_send:
                             probe_data = {
-                                'mac': MAC.lower(),
-                                'dbm': probe_class.dBm,
-                                'ssid': probe_class.ssid,
-                                'oui': probe_class.oui,
+                                "mac": MAC.lower(),
+                                "dbm": probe_class.dBm,
+                                "ssid": probe_class.ssid,
+                                "oui": probe_class.oui,
                             }
-                            discord_notifier.send_notification(old_fingerprint, probe_data, notification_type)
+                            discord_notifier.post_discord_notification(
+                                old_fingerprint, probe_data, notification_type
+                            )
 
                 except Exception as e:
                     general_logger.error(f"Failed to save sighting: {e}")

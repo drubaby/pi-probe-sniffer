@@ -442,3 +442,58 @@ def link_fingerprint_to_identity(fingerprint_id: str, identity_id: str):
         """,
             (identity_id, fingerprint_id),
         )
+
+
+def disable_fingerprint_notifications(fingerprint_id: str):
+    """Disable notifications for a fingerprint (called from bot button)."""
+    with get_cursor() as cursor:
+        cursor.execute(
+            "UPDATE device_fingerprints SET notification_enabled = 0 WHERE fingerprint_id = ?",
+            (fingerprint_id,),
+        )
+
+
+def set_fingerprint_alias(fingerprint_id: str, alias: str) -> str:
+    """
+    Set an alias for a fingerprint by creating or updating its identity.
+
+    Args:
+        fingerprint_id: The fingerprint hash
+        alias: User-friendly name for the device
+
+    Returns:
+        The identity_id (same as fingerprint_id for simplicity)
+    """
+    now = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+
+    with get_cursor() as cursor:
+        # Check if fingerprint already has an identity
+        cursor.execute(
+            "SELECT identity_id FROM device_fingerprints WHERE fingerprint_id = ?",
+            (fingerprint_id,),
+        )
+        row = cursor.fetchone()
+        existing_identity_id = row["identity_id"] if row else None
+
+        if existing_identity_id:
+            # Update existing identity alias
+            cursor.execute(
+                "UPDATE device_identities SET alias = ?, alias_set_at = ? WHERE identity_id = ?",
+                (alias, now, existing_identity_id),
+            )
+            return existing_identity_id
+        else:
+            # Create new identity using fingerprint_id as identity_id
+            cursor.execute(
+                """
+                INSERT INTO device_identities (identity_id, alias, alias_set_at, first_seen, last_seen, total_sightings)
+                VALUES (?, ?, ?, ?, ?, 0)
+                """,
+                (fingerprint_id, alias, now, now, now),
+            )
+            # Link fingerprint to this identity
+            cursor.execute(
+                "UPDATE device_fingerprints SET identity_id = ? WHERE fingerprint_id = ?",
+                (fingerprint_id, fingerprint_id),
+            )
+            return fingerprint_id

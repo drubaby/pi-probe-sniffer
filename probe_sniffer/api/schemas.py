@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from datetime import datetime
 
 
 class Device(BaseModel):
@@ -37,6 +36,7 @@ class DeviceWithStats(Device):
 
 class Sighting(BaseModel):
     """Individual probe request sighting"""
+
     id: int
     timestamp: str
     mac: str
@@ -51,7 +51,16 @@ class Sighting(BaseModel):
 
 class SightingsResponse(BaseModel):
     """Paginated sightings response"""
+
     sightings: list[Sighting]
     total: int
     limit: int
     offset: int
+
+
+class NotifyRequest(BaseModel):
+    """Request payload for /internal/notify endpoint."""
+
+    fingerprint: dict
+    probe_data: dict
+    notification_type: str

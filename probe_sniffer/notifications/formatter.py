@@ -34,7 +34,11 @@ def format_device_embed(fingerprint: dict, probe_data: dict, notification_type: 
             "value": str(fingerprint.get("sighting_count", 0)),
             "inline": True,
         },
-        {"name": "First Seen", "value": fingerprint.get("first_seen", "Unknown"), "inline": True},
+        {
+            "name": "First Seen",
+            "value": datetime.utcnow(fingerprint.get("first_seen")),
+            "inline": True,
+        },
     ]
 
     # Add last_seen for returning devices

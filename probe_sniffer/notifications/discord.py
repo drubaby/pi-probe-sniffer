@@ -3,11 +3,24 @@
 import logging
 import requests
 from probe_sniffer import config
+from probe_sniffer.notifications.formatter import format_device_embed
 
 logger = logging.getLogger("DISCORD")
 
 # Reusable session for connection pooling (HTTP keep-alive)
 _session = requests.Session()
+
+
+def post_discord_notification(fingerprint: dict, probe_data: dict, notification_type: str) -> bool:
+    return requests.post(
+        "http://localhost:8000/internal/notify",
+        json={
+            "fingerprint": fingerprint,
+            "probe_data": probe_data,
+            "notification_type": notification_type,
+        },
+        timeout=5,
+    )
 
 
 def send_notification(fingerprint: dict, probe_data: dict, notification_type: str) -> bool:
@@ -39,7 +52,6 @@ def send_notification(fingerprint: dict, probe_data: dict, notification_type: st
         return False
 
     try:
-        from probe_sniffer.notifications.formatter import format_device_embed
 
         # Build Discord embed
         embed = format_device_embed(fingerprint, probe_data, notification_type)

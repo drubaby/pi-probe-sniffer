@@ -22,3 +22,4 @@ dist/
 build/
 *.egg
 .DS_Store
+UI_ISSUES.md
